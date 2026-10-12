@@ -5,3 +5,5 @@ node_modules/
 scratch/
 .env
 *.bat
+cloudflared.exe
+*.exe
