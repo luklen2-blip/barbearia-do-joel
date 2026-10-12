@@ -18,5 +18,8 @@
     "barbearia-do-joel"
   ],
   "author": "Luciano",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "pg": "^8.23.1"
+  }
 }

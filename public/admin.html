@@ -181,7 +181,13 @@
           localStorage.setItem('joel_admin_token', currentToken);
           showDashboard();
         } else {
-          errorDiv.textContent = data.error || 'Senha incorreta.';
+          if (res.status === 503) {
+            errorDiv.innerHTML = `⚠️ <strong>Acesso Administrativo Desativado:</strong><br>${data.error || 'Configure a variável ADMIN_PASSWORD no ambiente.'}`;
+          } else if (res.status === 429) {
+            errorDiv.innerHTML = `🛑 <strong>Bloqueio Temporário:</strong><br>${data.error}`;
+          } else {
+            errorDiv.textContent = data.error || 'Senha incorreta.';
+          }
           errorDiv.style.display = 'block';
         }
       } catch (err) {
@@ -190,7 +196,15 @@
       }
     }
 
-    function handleLogout() {
+    async function handleLogout() {
+      if (currentToken) {
+        try {
+          await fetch('/api/admin/logout', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${currentToken}` }
+          });
+        } catch (_) {}
+      }
       currentToken = '';
       localStorage.removeItem('joel_admin_token');
       showLogin();
@@ -200,6 +214,7 @@
       document.getElementById('login-section').style.display = 'block';
       document.getElementById('dashboard-section').style.display = 'none';
       document.getElementById('btn-logout').style.display = 'none';
+      document.getElementById('admin-pass').value = '';
     }
 
     function showDashboard() {

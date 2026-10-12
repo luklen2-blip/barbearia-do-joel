@@ -1,44 +1,76 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { db } from './database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 3000;
-const DATA_DIR = path.join(__dirname, 'data');
-const AGENDAMENTOS_FILE = path.join(DATA_DIR, 'agendamentos.json');
 
-// Credenciais Administrativas
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Joel@1992';
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'joel_admin_token_secure_1992';
+// Inicializa banco de dados (PostgreSQL com fallback para JsonDB atômico)
+await db.init();
 
-// Garante que o diretório e arquivo de dados existam com persistência atômica
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-if (!fs.existsSync(AGENDAMENTOS_FILE)) {
-  const tempPath = `${AGENDAMENTOS_FILE}.tmp`;
-  fs.writeFileSync(tempPath, JSON.stringify([], null, 2), 'utf-8');
-  fs.renameSync(tempPath, AGENDAMENTOS_FILE);
-}
+// --- 1. SEGURANÇA E PROTEÇÃO CONTRA FORÇA BRUTA ---
+// Rastreamento de tentativas de login por IP
+const loginAttempts = new Map(); // ip -> { count: number, lockedUntil: number }
+const activeSessions = new Map(); // token -> { createdAt: number, expiresAt: number, ip: string }
 
-// Persistência Atômica Resiliente (JsonDB ACID: .tmp -> renameSync)
-function saveAgendamentosAtomic(agendamentos) {
-  const tempPath = `${AGENDAMENTOS_FILE}.tmp`;
-  fs.writeFileSync(tempPath, JSON.stringify(agendamentos, null, 2), 'utf-8');
-  fs.renameSync(tempPath, AGENDAMENTOS_FILE);
-}
+function checkBruteForce(ip) {
+  const record = loginAttempts.get(ip);
+  if (!record) return { allowed: true };
 
-function loadAgendamentos() {
-  try {
-    const raw = fs.readFileSync(AGENDAMENTOS_FILE, 'utf-8');
-    return JSON.parse(raw || '[]');
-  } catch (err) {
-    console.error('Erro ao ler agendamentos.json:', err);
-    return [];
+  const now = Date.now();
+  if (record.lockedUntil && now < record.lockedUntil) {
+    const remainingMinutes = Math.ceil((record.lockedUntil - now) / 60000);
+    return { allowed: false, remainingMinutes };
   }
+
+  // Se o tempo de bloqueio expirou, reseta o contador
+  if (record.lockedUntil && now >= record.lockedUntil) {
+    loginAttempts.delete(ip);
+    return { allowed: true };
+  }
+
+  return { allowed: true };
+}
+
+function recordFailedLogin(ip) {
+  const now = Date.now();
+  const record = loginAttempts.get(ip) || { count: 0, lockedUntil: null };
+  record.count++;
+
+  // Bloqueio de 15 minutos após 5 tentativas incorretas
+  if (record.count >= 5) {
+    record.lockedUntil = now + (15 * 60 * 1000);
+  }
+  loginAttempts.set(ip, record);
+  return record.count;
+}
+
+function clearFailedLogin(ip) {
+  loginAttempts.delete(ip);
+}
+
+// Autenticação Baseada em Sessões Criptográficas Temporárias
+function isAuthenticatedAdmin(req) {
+  const authHeader = req.headers['authorization'] || '';
+  if (!authHeader.startsWith('Bearer ')) return false;
+  const token = authHeader.slice(7).trim();
+  if (!token) return false;
+
+  const session = activeSessions.get(token);
+  if (!session) return false;
+
+  const now = Date.now();
+  if (now > session.expiresAt) {
+    activeSessions.delete(token); // Sessão expirada
+    return false;
+  }
+
+  return true;
 }
 
 // Sanitização de entradas contra injeção e XSS
@@ -62,7 +94,7 @@ function applySecurityHeaders(res) {
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 }
 
-// Rate Limiting em Memória
+// Rate Limiting Geral por IP
 const ipRequests = new Map();
 function checkRateLimit(ip, limit = 80, windowMs = 60000) {
   const now = Date.now();
@@ -75,14 +107,6 @@ function checkRateLimit(ip, limit = 80, windowMs = 60000) {
   }
   ipRequests.set(ip, record);
   return record.count <= limit;
-}
-
-// Autenticação de Administrador
-function isAuthenticatedAdmin(req) {
-  const authHeader = req.headers['authorization'] || '';
-  if (!authHeader.startsWith('Bearer ')) return false;
-  const token = authHeader.slice(7).trim();
-  return token === ADMIN_SECRET;
 }
 
 // Helper para cálculo do CRC-16 / CCITT-FALSE (Padrão Oficial EMV Banco Central)
@@ -132,7 +156,7 @@ function generatePixPayload({ pixKey, name = 'BARBEARIA DO JOEL', city = 'RIO DE
   return payload + crcHex;
 }
 
-// Cálculo de slots de 30 minutos ocupados por um serviço (considerando duração)
+// Cálculo de slots de 30 minutos ocupados por um serviço
 function getOccupiedSlots(startTime, durationMinutes = 30) {
   const [h, m] = startTime.split(':').map(Number);
   const slots = [startTime];
@@ -210,10 +234,10 @@ const BARBEARIA_INFO = {
 };
 
 // Servidor HTTP Principal
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   applySecurityHeaders(res);
 
-  const clientIp = req.socket.remoteAddress || '127.0.0.1';
+  const clientIp = (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : req.socket.remoteAddress) || '127.0.0.1';
   if (!checkRateLimit(clientIp, 120, 60000)) {
     res.writeHead(429, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: false, error: 'Muitas requisições. Aguarde um minuto.' }));
@@ -231,7 +255,8 @@ const server = http.createServer((req, res) => {
       app: process.env.APP_NAME || 'Barbearia do Joel',
       version: '2.0.0',
       uptime_seconds: Math.floor(process.uptime()),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      database: db.isPostgres ? 'postgresql' : 'jsondb'
     }));
     return;
   }
@@ -243,7 +268,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 3. Geração de PIX EMV Oficial para Sinal ou Total
+  // 3. Geração de PIX EMV Oficial
   if (pathname === '/api/pix' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => body += chunk);
@@ -281,26 +306,20 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 4. Listagem Pública de Horários Ocupados (sem expor dados pessoais dos clientes)
+  // 4. Listagem Pública de Horários Ocupados (sem dados pessoais)
   if (pathname === '/api/agendamentos' && req.method === 'GET') {
     try {
       const dataQuery = parsedUrl.searchParams.get('data');
       const unidadeQuery = parsedUrl.searchParams.get('unidade') || 'matriz';
       const profissionalQuery = parsedUrl.searchParams.get('profissional');
 
-      let agendamentos = loadAgendamentos().filter(a => a.status !== 'cancelado');
+      const filtros = { status: 'confirmado' };
+      if (dataQuery) filtros.data = dataQuery;
+      if (unidadeQuery) filtros.unidade = unidadeQuery;
+      if (profissionalQuery) filtros.profissional = profissionalQuery;
 
-      if (dataQuery) {
-        agendamentos = agendamentos.filter(a => a.data === dataQuery);
-      }
-      if (unidadeQuery) {
-        agendamentos = agendamentos.filter(a => a.unidade === unidadeQuery);
-      }
-      if (profissionalQuery) {
-        agendamentos = agendamentos.filter(a => a.profissional === profissionalQuery);
-      }
+      const agendamentos = await db.getAll(filtros);
 
-      // Retorna apenas horários ocupados e slots expandidos por duração
       const slotsOcupados = [];
       agendamentos.forEach(a => {
         const s = getOccupiedSlots(a.horario, a.duracaoMin || 30);
@@ -324,15 +343,14 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 5. Criação de Novo Agendamento com Validações Estritas
+  // 5. Criação de Novo Agendamento
   if (pathname === '/api/agendamentos' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => body += chunk);
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const ag = JSON.parse(body || '{}');
 
-        // Validação de campos obrigatórios
         const nome = sanitizeText(ag.clienteNome);
         const telefone = sanitizeText(ag.clienteTelefone).replace(/\D/g, '');
         const servicoNome = sanitizeText(ag.servico);
@@ -360,9 +378,9 @@ const server = http.createServer((req, res) => {
           return;
         }
 
-        // Validação de data não passada (considerando fuso UTC-3)
+        // Validação de data não retroativa
         const hojeObj = new Date();
-        const hojeStr = hojeObj.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }); // YYYY-MM-DD
+        const hojeStr = hojeObj.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
         if (data < hojeStr) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: false, error: 'A data do agendamento não pode ser no passado.' }));
@@ -372,7 +390,7 @@ const server = http.createServer((req, res) => {
         // Validação de dia da semana (Fechado aos Domingos e Segundas)
         const [ano, mes, dia] = data.split('-').map(Number);
         const dataObj = new Date(ano, mes - 1, dia, 12, 0, 0);
-        const diaSemana = dataObj.getDay(); // 0 = Domingo, 1 = Segunda
+        const diaSemana = dataObj.getDay();
 
         if (diaSemana === 0 || diaSemana === 1) {
           res.writeHead(422, { 'Content-Type': 'application/json' });
@@ -385,45 +403,15 @@ const server = http.createServer((req, res) => {
         const maxHora = (diaSemana === 6) ? 18 : 19;
         if (horaNum < 9 || horaNum > maxHora || (horaNum === maxHora && minNum > 0)) {
           res.writeHead(422, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: `Horário fora do expediente. Terça a sexta: 09h às 19h. Sábado: 09h às 18h.` }));
+          res.end(JSON.stringify({ success: false, error: 'Horário fora do expediente.' }));
           return;
         }
 
-        // Busca serviço correspondente para obter preço e duração reais
         const servicoObj = BARBEARIA_INFO.servicos.find(s => s.nome.toLowerCase() === servicoNome.toLowerCase() || s.id === ag.servicoId);
         const precoReal = servicoObj ? servicoObj.preco : (ag.preco || 30.00);
         const duracaoMinReal = servicoObj ? servicoObj.duracaoMin : 30;
 
-        // Calcula slots solicitados
         const slotsSolicitados = getOccupiedSlots(horario, duracaoMinReal);
-
-        const agendamentos = loadAgendamentos();
-
-        // Verificação Robusta de Conflito de Horário:
-        // 1. Um mesmo profissional não pode ter dois agendamentos no mesmo horário (mesmo em unidades diferentes).
-        // 2. Na mesma unidade e cadeira, não pode haver sobreposição de slots.
-        const conflito = agendamentos.find(item => {
-          if (item.status === 'cancelado') return false;
-          if (item.data !== data) return false;
-
-          const itemSlots = getOccupiedSlots(item.horario, item.duracaoMin || 30);
-          const sobrepoe = slotsSolicitados.some(slot => itemSlots.includes(slot));
-          if (!sobrepoe) return false;
-
-          // Se for o mesmo profissional reservado
-          if (item.profissional === profissional) return true;
-
-          // Se for na mesma unidade com profissional indefinido ou mesmo barbeiro
-          if (item.unidade === unidade && (item.profissional === profissional || profissional.includes('Joel'))) return true;
-
-          return false;
-        });
-
-        if (conflito) {
-          res.writeHead(409, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'O horário selecionado já está ocupado para este profissional. Por favor escolha outro horário.' }));
-          return;
-        }
 
         const novoId = `JOEL-${Date.now().toString().slice(-4)}`;
         const novoAgendamento = {
@@ -445,10 +433,14 @@ const server = http.createServer((req, res) => {
           criadoEm: new Date().toISOString()
         };
 
-        agendamentos.push(novoAgendamento);
-        saveAgendamentosAtomic(agendamentos);
+        const result = await db.create(novoAgendamento, slotsSolicitados);
 
-        // Gera texto formatado para envio direto via WhatsApp
+        if (result.conflict) {
+          res.writeHead(409, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'O horário selecionado já está ocupado para este profissional. Por favor escolha outro horário.' }));
+          return;
+        }
+
         const whatsAppText = 
 `💈 *NOVO AGENDAMENTO - BARBEARIA DO JOEL* 💈
 📌 *Protocolo:* #${novoAgendamento.id}
@@ -484,26 +476,23 @@ _Agendamento registrado no site oficial!_`;
   if (pathname === '/api/agendamentos/cancelar' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => body += chunk);
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const { id, telefone } = JSON.parse(body || '{}');
         if (!id || !telefone) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'Protocolo e telefone do agendamento são obrigatórios.' }));
+          res.end(JSON.stringify({ success: false, error: 'Protocolo e telefone são obrigatórios.' }));
           return;
         }
 
-        const agendamentos = loadAgendamentos();
-        const limpaTel = telefone.replace(/\D/g, '');
-        const target = agendamentos.find(a => a.id.toUpperCase() === id.trim().toUpperCase());
-
+        const target = await db.getById(id);
         if (!target) {
           res.writeHead(404, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: false, error: 'Agendamento não encontrado com o protocolo informado.' }));
           return;
         }
 
-        // Validação de segurança: últimos 4 dígitos do telefone devem bater
+        const limpaTel = telefone.replace(/\D/g, '');
         const targetTel = target.clienteTelefone.replace(/\D/g, '');
         if (!targetTel.endsWith(limpaTel.slice(-4))) {
           res.writeHead(403, { 'Content-Type': 'application/json' });
@@ -517,9 +506,7 @@ _Agendamento registrado no site oficial!_`;
           return;
         }
 
-        target.status = 'cancelado';
-        target.canceladoEm = new Date().toISOString();
-        saveAgendamentosAtomic(agendamentos);
+        await db.updateStatus(target.id, 'cancelado', { canceladoEm: new Date().toISOString() });
 
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({
@@ -535,23 +522,76 @@ _Agendamento registrado no site oficial!_`;
     return;
   }
 
-  // 7. Autenticação Administrativa (Login de Barbeiro/Gestor)
+  // 7. Autenticação Administrativa com Proteção contra Força Bruta
   if (pathname === '/api/admin/login' && req.method === 'POST') {
+    // 7a. Verifica se a variável de ambiente obrigatória ADMIN_PASSWORD está configurada
+    if (!process.env.ADMIN_PASSWORD) {
+      console.error('[Segurança] Login administrativo rejeitado: Variável ADMIN_PASSWORD não configurada no ambiente.');
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: false,
+        error: 'Acesso administrativo desativado. A variável ADMIN_PASSWORD deve ser configurada no ambiente de produção.'
+      }));
+      return;
+    }
+
+    // 7b. Proteção contra força bruta
+    const bruteCheck = checkBruteForce(clientIp);
+    if (!bruteCheck.allowed) {
+      res.writeHead(429, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: false,
+        error: `Muitas tentativas incorretas. Acesso bloqueado temporariamente por ${bruteCheck.remainingMinutes} minuto(s).`
+      }));
+      return;
+    }
+
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       try {
         const { password } = JSON.parse(body || '{}');
-        if (password === ADMIN_PASSWORD) {
+
+        // Comparação segura em tempo constante para mitigar timing attacks
+        const expectedBuffer = Buffer.from(process.env.ADMIN_PASSWORD, 'utf-8');
+        const inputBuffer = Buffer.from(String(password || ''), 'utf-8');
+
+        let isMatch = false;
+        if (expectedBuffer.length === inputBuffer.length) {
+          isMatch = crypto.timingSafeEqual(expectedBuffer, inputBuffer);
+        }
+
+        if (isMatch) {
+          clearFailedLogin(clientIp);
+
+          // Gera token criptográfico aleatório dinâmico para a sessão
+          const sessionToken = crypto.randomBytes(32).toString('hex');
+          const now = Date.now();
+          const expiresAt = now + (8 * 60 * 60 * 1000); // 8 horas de validade
+
+          activeSessions.set(sessionToken, {
+            createdAt: now,
+            expiresAt,
+            ip: clientIp
+          });
+
           res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
           res.end(JSON.stringify({
             success: true,
-            token: ADMIN_SECRET,
-            usuario: 'Administrador Barbearia do Joel'
+            token: sessionToken,
+            usuario: 'Administrador Barbearia do Joel',
+            expiresIn: 28800
           }));
         } else {
+          const attempts = recordFailedLogin(clientIp);
+          const remainingAttempts = Math.max(0, 5 - attempts);
           res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'Senha incorreta.' }));
+          res.end(JSON.stringify({
+            success: false,
+            error: remainingAttempts > 0 
+              ? `Senha incorreta. ${remainingAttempts} tentativa(s) restante(s) antes do bloqueio temporário.` 
+              : 'Limite de tentativas excedido. Acesso bloqueado temporariamente por 15 minutos.'
+          }));
         }
       } catch {
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -561,11 +601,23 @@ _Agendamento registrado no site oficial!_`;
     return;
   }
 
-  // 8. Consulta de Agendamentos Administrativa (Protegida)
+  // 8. Logout Administrativo (Revogação Imediata da Sessão)
+  if (pathname === '/api/admin/logout' && req.method === 'POST') {
+    const authHeader = req.headers['authorization'] || '';
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7).trim();
+      activeSessions.delete(token);
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ success: true, message: 'Sessão administrativa encerrada com sucesso.' }));
+    return;
+  }
+
+  // 9. Consulta Administrativa de Agendamentos (Protegida por Token de Sessão)
   if (pathname === '/api/admin/agendamentos' && req.method === 'GET') {
     if (!isAuthenticatedAdmin(req)) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: false, error: 'Acesso não autorizado. Token ausente ou inválido.' }));
+      res.end(JSON.stringify({ success: false, error: 'Acesso não autorizado. Sessão inválida ou expirada.' }));
       return;
     }
 
@@ -574,14 +626,12 @@ _Agendamento registrado no site oficial!_`;
       const unidadeQuery = parsedUrl.searchParams.get('unidade');
       const statusQuery = parsedUrl.searchParams.get('status');
 
-      let agendamentos = loadAgendamentos();
+      const filtros = {};
+      if (dataQuery) filtros.data = dataQuery;
+      if (unidadeQuery) filtros.unidade = unidadeQuery;
+      if (statusQuery) filtros.status = statusQuery;
 
-      if (dataQuery) agendamentos = agendamentos.filter(a => a.data === dataQuery);
-      if (unidadeQuery) agendamentos = agendamentos.filter(a => a.unidade === unidadeQuery);
-      if (statusQuery) agendamentos = agendamentos.filter(a => a.status === statusQuery);
-
-      // Ordena decrescente por data e horário
-      agendamentos.sort((a, b) => (b.data + b.horario).localeCompare(a.data + a.horario));
+      const agendamentos = await db.getAll(filtros);
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({
@@ -596,7 +646,7 @@ _Agendamento registrado no site oficial!_`;
     return;
   }
 
-  // 9. Atualização de Status Administrativa (Protegida: Concluído / Cancelado / Confirmado)
+  // 10. Atualização de Status Administrativa (Protegida)
   if (pathname.startsWith('/api/admin/agendamentos/') && req.method === 'PATCH') {
     if (!isAuthenticatedAdmin(req)) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -607,7 +657,7 @@ _Agendamento registrado no site oficial!_`;
     const id = pathname.replace('/api/admin/agendamentos/', '').trim();
     let body = '';
     req.on('data', chunk => body += chunk);
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const { status } = JSON.parse(body || '{}');
         const statusValidos = ['confirmado', 'concluido', 'cancelado', 'aguardando_confirmacao'];
@@ -617,20 +667,15 @@ _Agendamento registrado no site oficial!_`;
           return;
         }
 
-        const agendamentos = loadAgendamentos();
-        const item = agendamentos.find(a => a.id.toUpperCase() === id.toUpperCase());
-        if (!item) {
+        const updated = await db.updateStatus(id, status);
+        if (!updated) {
           res.writeHead(404, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: false, error: 'Agendamento não encontrado.' }));
           return;
         }
 
-        item.status = status;
-        item.atualizadoEm = new Date().toISOString();
-        saveAgendamentosAtomic(agendamentos);
-
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({ success: true, agendamento: item }));
+        res.end(JSON.stringify({ success: true, agendamento: updated }));
       } catch (err) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message }));
@@ -639,7 +684,7 @@ _Agendamento registrado no site oficial!_`;
     return;
   }
 
-  // 10. Resolução Universal e Resiliente de Arquivos Estáticos (Padrão Luciano)
+  // 11. Resolução Universal e Resiliente de Arquivos Estáticos (Padrão Luciano)
   let targetFile = pathname;
   if (targetFile === '/' || targetFile === '') {
     targetFile = '/index.html';
@@ -676,7 +721,7 @@ _Agendamento registrado no site oficial!_`;
     return;
   }
 
-  // Fallback SPA para index.html se for navegação de página
+  // Fallback SPA
   const fallbackCandidates = [
     path.join(__dirname, 'public', 'index.html'),
     path.join(__dirname, 'index.html'),

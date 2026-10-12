@@ -34,6 +34,7 @@ async function runTests() {
   console.log('▶ Teste 1: Verificação de Arquivos Mandatórios de Nuvem e Frontend');
   const requiredFiles = [
     'server.js',
+    'database.js',
     'render.yaml',
     'Dockerfile',
     '.gitignore',
@@ -53,7 +54,7 @@ async function runTests() {
     const full = path.join(ROOT_DIR, relPath);
     assert.ok(fs.existsSync(full), `Arquivo essencial não encontrado: ${relPath}`);
   }
-  console.log('  ✅ Todos os 14 arquivos essenciais estão presentes.');
+  console.log(`  ✅ Todos os ${requiredFiles.length} arquivos essenciais estão presentes.`);
   passed++;
 
   // Teste 2: Validação Algorítmica de CRC-16 do PIX EMV
@@ -71,7 +72,10 @@ async function runTests() {
   const dbRaw = fs.readFileSync(dbPath, 'utf-8');
   const dbData = JSON.parse(dbRaw);
   assert.ok(Array.isArray(dbData), 'A base deve ser um array JSON');
-  console.log('  ✅ Banco JsonDB íntegro e operacional.');
+  // Limpa agendamentos de teste prévios (datas 2099) para garantir idempotência dos testes
+  const sanitizedData = dbData.filter(a => !a.data?.startsWith('2099-'));
+  fs.writeFileSync(dbPath, JSON.stringify(sanitizedData, null, 2), 'utf-8');
+  console.log('  ✅ Banco JsonDB íntegro e operacional (isolamento de testes preparado).');
   passed++;
 
   // Inicia Servidor Local em Porta de Teste
@@ -172,7 +176,7 @@ async function runTests() {
   console.log(`  ✅ Agendamento #${protocolId} criado com sucesso`);
   passed++;
 
-  // Teste 8: Detecção e Prevenção de Conflito de Horário Concorrente
+  // Teste 8: Detecção e Prevenção de Conflito de Horário e Concorrência Atômica
   console.log('▶ Teste 8: Prevenção de Conflito para o Mesmo Profissional');
   const conflictRes = await makeRequest({
     path: '/api/agendamentos',
@@ -189,10 +193,68 @@ async function runTests() {
   }));
   assert.strictEqual(conflictRes.status, 409, 'Horário conflitante deve retornar 409 Conflict');
   console.log('  ✅ Conflito detectado e impedido com sucesso (HTTP 409)');
+
+  // Teste 8b: Concorrência Simultânea Atômica (Dois clientes ao mesmo tempo)
+  const concurrentDate = '2099-01-07'; // Quarta-feira
+  const concurrentSlot = '11:00';
+  const [resA, resB] = await Promise.all([
+    makeRequest({
+      path: '/api/agendamentos',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }, JSON.stringify({
+      clienteNome: 'Cliente Alpha',
+      clienteTelefone: '21911112222',
+      servico: 'Corte Tradicional / Social',
+      unidade: 'matriz',
+      profissional: 'Joel (Fundador & Barbeiro Titular)',
+      data: concurrentDate,
+      horario: concurrentSlot
+    })),
+    makeRequest({
+      path: '/api/agendamentos',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }, JSON.stringify({
+      clienteNome: 'Cliente Beta',
+      clienteTelefone: '21933334444',
+      servico: 'Corte Degradê / Fade Moderno',
+      unidade: 'matriz',
+      profissional: 'Joel (Fundador & Barbeiro Titular)',
+      data: concurrentDate,
+      horario: concurrentSlot
+    }))
+  ]);
+  const statuses = [resA.status, resB.status].sort();
+  assert.deepStrictEqual(statuses, [201, 409], 'Exatamente um agendamento concorrente deve ter sucesso (201) e o outro sofrer conflito (409)');
+  console.log('  ✅ Teste de concorrência atômica validado: preveniu double-booking sob requisições paralelas');
   passed++;
 
-  // Teste 9: Cancelamento de Agendamento pelo Cliente com Validação
+  // Teste 9: Cancelamento de Agendamento pelo Cliente com Validação de Protocolo e Telefone
   console.log('▶ Teste 9: Cancelamento de Agendamento por Protocolo e Telefone');
+  // Tentativa com protocolo inexistente (deve falhar 404)
+  const notFoundCancel = await makeRequest({
+    path: '/api/agendamentos/cancelar',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, JSON.stringify({
+    id: 'JOEL-INEXISTENTE',
+    telefone: '21987654321'
+  }));
+  assert.strictEqual(notFoundCancel.status, 404, 'Protocolo inexistente deve retornar 404');
+
+  // Tentativa com telefone incompatível com o agendamento (deve falhar 403 Forbidden)
+  const wrongPhoneCancel = await makeRequest({
+    path: '/api/agendamentos/cancelar',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, JSON.stringify({
+    id: protocolId,
+    telefone: '21900000000'
+  }));
+  assert.strictEqual(wrongPhoneCancel.status, 403, 'Cancelamento com telefone incompatível deve ser rejeitado com 403 Forbidden');
+
+  // Cancelamento com dados corretos
   const cancelRes = await makeRequest({
     path: '/api/agendamentos/cancelar',
     method: 'POST',
@@ -204,33 +266,88 @@ async function runTests() {
   assert.strictEqual(cancelRes.status, 200);
   const cancelJson = JSON.parse(cancelRes.body);
   assert.strictEqual(cancelJson.success, true);
-  console.log(`  ✅ Agendamento #${protocolId} cancelado com sucesso e horário liberado`);
+
+  // Tentativa de cancelar agendamento já cancelado (deve retornar 400)
+  const reCancelRes = await makeRequest({
+    path: '/api/agendamentos/cancelar',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, JSON.stringify({
+    id: protocolId,
+    telefone: '21987654321'
+  }));
+  assert.strictEqual(reCancelRes.status, 400, 'Tentativa de re-cancelar deve retornar 400');
+  console.log(`  ✅ Agendamento #${protocolId} cancelado com segurança e proteções ativas`);
   passed++;
 
-  // Teste 10: Autenticação Administrativa e Controle de Acesso
-  console.log('▶ Teste 10: Autenticação e Proteção do Painel Administrativo');
-  // Tentativa com senha errada
-  const wrongLoginRes = await makeRequest({
+  // Teste 10: Autenticação Administrativa e Hardening de Segurança
+  console.log('▶ Teste 10: Hardening da Autenticação Administrativa');
+
+  // 10a: Rejeição com HTTP 503 quando ADMIN_PASSWORD não configurada
+  const savedAdminPass = process.env.ADMIN_PASSWORD;
+  delete process.env.ADMIN_PASSWORD;
+  const missingPassRes = await makeRequest({
     path: '/api/admin/login',
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
-  }, JSON.stringify({ password: 'senha_errada' }));
-  assert.strictEqual(wrongLoginRes.status, 401);
+  }, JSON.stringify({ password: 'qualquer_coisa' }));
+  assert.strictEqual(missingPassRes.status, 503, 'Ausência de ADMIN_PASSWORD deve rejeitar com 503 Service Unavailable');
+  const missingPassJson = JSON.parse(missingPassRes.body);
+  assert.ok(missingPassJson.error.includes('ADMIN_PASSWORD'), 'Mensagem de erro segura deve orientar a configuração');
+  process.env.ADMIN_PASSWORD = savedAdminPass; // Restaura
+  console.log('  ✅ Ausência de ADMIN_PASSWORD bloqueia painel com HTTP 503 com segurança');
 
-  // Tentativa com senha certa
+  // 10b: Proteção contra Força Bruta (5 tentativas com IP isolado)
+  const attackerIp = '198.51.100.99';
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const bfRes = await makeRequest({
+      path: '/api/admin/login',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Forwarded-For': attackerIp
+      }
+    }, JSON.stringify({ password: `senha_errada_${attempt}` }));
+    assert.strictEqual(bfRes.status, 401, `Tentativa ${attempt} deve retornar 401`);
+  }
+
+  // 6ª tentativa pelo mesmo IP deve ser travada por Brute-force Lockout (HTTP 429)
+  const lockedRes = await makeRequest({
+    path: '/api/admin/login',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Forwarded-For': attackerIp
+    }
+  }, JSON.stringify({ password: 'senha_errada_6' }));
+  assert.strictEqual(lockedRes.status, 429, '6ª tentativa deve ser bloqueada por rate limit de força bruta com HTTP 429');
+  console.log('  ✅ Proteção contra força bruta validada: IP bloqueado com HTTP 429 após 5 falhas');
+
+  // 10c: Login legítimo com senha correta
   const rightLoginRes = await makeRequest({
     path: '/api/admin/login',
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
-  }, JSON.stringify({ password: 'TesteSenhaSegura@1992' }));
+  }, JSON.stringify({ password: savedAdminPass }));
   assert.strictEqual(rightLoginRes.status, 200);
-  const adminToken = JSON.parse(rightLoginRes.body).token;
+  const loginPayload = JSON.parse(rightLoginRes.body);
+  assert.strictEqual(loginPayload.success, true);
+  assert.ok(typeof loginPayload.token === 'string' && loginPayload.token.length === 64, 'Token deve ser hexadecimal criptográfico de 64 caracteres');
+  const adminToken = loginPayload.token;
+  console.log('  ✅ Login administrativo emite token criptográfico de alta entropia');
 
-  // Consulta sem token (deve barrar 401)
+  // 10d: Acesso a rotas administrativas sem autenticação e com token inválido
   const unauthRes = await makeRequest({ path: '/api/admin/agendamentos', method: 'GET' });
-  assert.strictEqual(unauthRes.status, 401);
+  assert.strictEqual(unauthRes.status, 401, 'Acesso sem token deve retornar 401');
 
-  // Consulta com Bearer token (deve autorizar 200)
+  const invalidTokenRes = await makeRequest({
+    path: '/api/admin/agendamentos',
+    method: 'GET',
+    headers: { 'Authorization': 'Bearer token_invalido_fake_123' }
+  });
+  assert.strictEqual(invalidTokenRes.status, 401, 'Token falso deve retornar 401');
+
+  // 10e: Acesso com token legítimo autorizado
   const authRes = await makeRequest({
     path: '/api/admin/agendamentos',
     method: 'GET',
@@ -239,7 +356,36 @@ async function runTests() {
   assert.strictEqual(authRes.status, 200);
   const adminList = JSON.parse(authRes.body);
   assert.ok(Array.isArray(adminList.agendamentos));
-  console.log('  ✅ Painel administrativo 100% blindado contra acessos não autorizados');
+
+  // 10f: Atualização de status autorizada via PATCH
+  const patchRes = await makeRequest({
+    path: `/api/admin/agendamentos/${protocolId}`,
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${adminToken}`
+    }
+  }, JSON.stringify({ status: 'confirmado' }));
+  assert.strictEqual(patchRes.status, 200);
+
+  // 10g: Logout administrativo e revogação imediata da sessão
+  const logoutRes = await makeRequest({
+    path: '/api/admin/logout',
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${adminToken}` }
+  });
+  assert.strictEqual(logoutRes.status, 200);
+  const logoutJson = JSON.parse(logoutRes.body);
+  assert.strictEqual(logoutJson.success, true);
+
+  // Tentativa de reusar o token revogado (deve ser rejeitado com 401)
+  const revokedAccessRes = await makeRequest({
+    path: '/api/admin/agendamentos',
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${adminToken}` }
+  });
+  assert.strictEqual(revokedAccessRes.status, 401, 'Token revogado pelo logout deve retornar 401');
+  console.log('  ✅ Logout administrativo invalida a sessão de forma irreversível');
   passed++;
 
   // Teste 11: Entrega dos Arquivos Estáticos e Páginas
