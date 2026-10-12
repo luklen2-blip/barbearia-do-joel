@@ -40,5 +40,24 @@
     "formaPagamento": "No Local / PIX",
     "status": "confirmado",
     "criadoEm": "2026-10-12T18:37:08.730Z"
+  },
+  {
+    "id": "JOEL-6118",
+    "clienteNome": "Carlos Homologação",
+    "clienteTelefone": "21987654321",
+    "servico": "Corte Degradê / Fade Moderno",
+    "preco": 35,
+    "duracaoMin": 40,
+    "unidade": "matriz",
+    "unidadeTitulo": "Unidade Matriz",
+    "unidadeEndereco": "Rua Francisco Mota, 93",
+    "profissional": "Joel (Fundador &amp; Barbeiro Titular)",
+    "data": "2099-01-06",
+    "horario": "14:00",
+    "observacoes": "",
+    "formaPagamento": "No Local / PIX",
+    "status": "cancelado",
+    "criadoEm": "2026-10-12T19:30:56.118Z",
+    "canceladoEm": "2026-10-12T19:30:56.152Z"
   }
 ]

@@ -58,6 +58,13 @@ async function runLiveE2E() {
   if (priv.status !== 200) throw new Error(`Rota /privacidade falhou: HTTP ${priv.status}`);
   console.log('✅ 5. /privacidade (LGPD) respondendo 200');
 
+  // 6. Painel Administrativo
+  const admin = await checkUrl('/admin');
+  if (admin.status !== 200 || !admin.data.includes('Painel do Barbeiro')) {
+    throw new Error(`Rota /admin falhou: HTTP ${admin.status}`);
+  }
+  console.log('✅ 6. /admin (Painel do Barbeiro) respondendo 200 com interface ativa');
+
   console.log('\n🎉 SUCESSO: Aplicação em nuvem 100% operacional, íntegra e aprovada para produção 24/7!');
 }
 

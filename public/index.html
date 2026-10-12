@@ -246,10 +246,18 @@
             </div>
 
             <div class="form-group">
+              <label for="booking-unit">Escolha a Unidade *</label>
+              <select id="booking-unit" class="form-control" required>
+                <option value="matriz" selected>Matriz (R. Francisco Mota, 93)</option>
+                <option value="filial">Filial (R. Alfredo Mariano, 24)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
               <label for="booking-barber">Profissional Preferido</label>
               <select id="booking-barber" class="form-control">
-                <option value="Joel / Barbeiro Titular">Joel (Fundador & Barbeiro Titular)</option>
-                <option value="Equipe da Casa">Qualquer profissional disponível</option>
+                <option value="Joel (Fundador & Barbeiro Titular)">Joel (Fundador & Barbeiro Titular - Matriz)</option>
+                <option value="Equipe Especializada da Casa">Equipe da Casa (Qualquer profissional)</option>
               </select>
             </div>
 
@@ -269,6 +277,13 @@
               <label for="booking-notes">Observações ou Preferências de Estilo (Opcional)</label>
               <input type="text" id="booking-notes" class="form-control" placeholder="Ex: Fade bem baixo na navalha, corte militar, toalha extra quente...">
             </div>
+
+            <div class="form-group full">
+              <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer;">
+                <input type="checkbox" id="consent-lgpd" required style="width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent-gold);">
+                <span>Li e concordo com os <a href="/termos" target="_blank" style="color: var(--accent-gold); text-decoration: underline;">Termos de Uso</a> e autorizo o contato via WhatsApp conforme a <a href="/privacidade" target="_blank" style="color: var(--accent-gold); text-decoration: underline;">Política de Privacidade (LGPD)</a>.</span>
+              </label>
+            </div>
           </div>
 
           <!-- Resumo de Custos -->
@@ -279,7 +294,7 @@
             </div>
             <div class="summary-row">
               <span>Local do Atendimento:</span>
-              <strong>Matriz: R. Francisco Mota, 93</strong>
+              <strong id="summary-unit">Matriz: R. Francisco Mota, 93</strong>
             </div>
             <div class="summary-row total">
               <span>Valor Total Estimado:</span>
@@ -287,13 +302,19 @@
             </div>
           </div>
 
-          <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+          <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
             <button type="submit" class="btn btn-primary" style="flex: 1; padding: 14px;">
               Confirmar Agendamento Online
             </button>
             <a href="https://wa.me/5521982156025" target="_blank" rel="noopener" class="btn btn-whatsapp" style="padding: 14px 20px;">
               <span>💬 Dúvidas no WhatsApp</span>
             </a>
+          </div>
+
+          <div style="text-align: center; border-top: 1px dashed var(--border-color); padding-top: 14px;">
+            <button type="button" id="btn-open-cancel-modal" class="btn btn-outline" style="font-size: 0.85rem; padding: 8px 16px;">
+              🔍 Já possui agendamento? Consultar ou Cancelar
+            </button>
           </div>
         </form>
       </div>
@@ -419,6 +440,7 @@
             <li><a href="/privacidade">Política de Privacidade (LGPD)</a></li>
             <li><a href="https://instagram.com/barbearia.do.joel" target="_blank" rel="noopener">Instagram Oficial</a></li>
             <li><a href="https://wa.me/5521982156025" target="_blank" rel="noopener">Suporte WhatsApp</a></li>
+            <li><a href="/admin" style="color: var(--accent-gold); font-weight: 600;">🔒 Área do Barbeiro</a></li>
           </ul>
         </div>
 
@@ -485,6 +507,35 @@
         <h4>Barbearia do Joel — Fachada Oficial</h4>
         <p>Rua Francisco Mota, 93 - Campo Grande, Rio de Janeiro - RJ · Desde 1992</p>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal de Cancelamento de Agendamento -->
+  <div id="cancel-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 440px;">
+      <button id="cancel-modal-close" class="modal-close">&times;</button>
+      <div style="font-size: 2.2rem; margin-bottom: 8px;">🗓️</div>
+      <h3 style="color: var(--accent-gold); margin-bottom: 8px;">Consultar ou Cancelar</h3>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px;">
+        Informe o protocolo e o telefone utilizado para gerenciar sua reserva.
+      </p>
+
+      <form id="cancel-form">
+        <div class="form-group" style="margin-bottom: 14px; text-align: left;">
+          <label for="cancel-input-id">Protocolo (Ex: JOEL-1234) *</label>
+          <input type="text" id="cancel-input-id" class="form-control" placeholder="JOEL-XXXX" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 20px; text-align: left;">
+          <label for="cancel-input-phone">Seu Telefone / WhatsApp *</label>
+          <input type="tel" id="cancel-input-phone" class="form-control" placeholder="(21) 98765-4321" required>
+        </div>
+
+        <button type="submit" class="btn btn-outline" style="width: 100%; border-color: #ef4444; color: #f87171; padding: 12px; font-weight: 700;">
+          ✕ Cancelar este Agendamento
+        </button>
+      </form>
+      <div id="cancel-msg" style="margin-top: 14px; font-size: 0.85rem; display: none;"></div>
     </div>
   </div>
 

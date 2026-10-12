@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Barbeiro · Barbearia do Joel</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <meta name="theme-color" content="#0d0f12">
+</head>
+<body class="mosaic-bg-subtle">
+  <div class="barber-pole-stripes"></div>
+
+  <!-- Navbar Admin -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="/" class="brand-logo">
+        <div class="pole-icon"></div>
+        <div class="brand-text">
+          <h1>Barbearia do Joel</h1>
+          <span>Painel Administrativo</span>
+        </div>
+      </a>
+      <div id="nav-actions" style="display: flex; gap: 12px; align-items: center;">
+        <a href="/" class="btn btn-outline" style="font-size: 0.85rem;">← Ver Site</a>
+        <button id="btn-logout" class="btn btn-outline" style="display: none; font-size: 0.85rem; border-color: #ef4444; color: #ef4444;">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding: 40px 20px; min-height: 80vh;">
+    <!-- Tela de Login -->
+    <div id="login-section" style="max-width: 420px; margin: 40px auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 36px; box-shadow: var(--shadow);">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="font-size: 2.2rem; margin-bottom: 8px;">💈</div>
+        <h2 style="color: var(--accent-gold); font-size: 1.5rem; font-weight: 800;">Acesso Restrito</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Área exclusiva para barbeiros e gestão da Barbearia do Joel.</p>
+      </div>
+
+      <form id="login-form">
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label for="admin-pass">Senha de Acesso</label>
+          <input type="password" id="admin-pass" class="form-control" placeholder="Digite a senha administrativa..." required autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">Entrar no Painel</button>
+      </form>
+      <div id="login-error" style="display: none; color: #ef4444; font-size: 0.85rem; text-align: center; margin-top: 14px;"></div>
+    </div>
+
+    <!-- Tela do Dashboard -->
+    <div id="dashboard-section" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 30px;">
+        <div>
+          <h2 style="font-size: 1.8rem; font-weight: 800; color: #fff;">Agenda de Atendimentos</h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem;">Controle em tempo real de clientes, horários e unidades.</p>
+        </div>
+        <button id="btn-refresh" class="btn btn-outline" style="font-size: 0.85rem;">🔄 Atualizar Agenda</button>
+      </div>
+
+      <!-- Cards de Métricas -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 30px;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 18px; border-radius: var(--radius-sm);">
+          <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Total Registrado</span>
+          <h3 id="stat-total" style="font-size: 1.8rem; color: #fff; font-weight: 800; margin-top: 4px;">0</h3>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid rgba(234, 179, 8, 0.4); padding: 18px; border-radius: var(--radius-sm);">
+          <span style="font-size: 0.8rem; color: var(--accent-gold); text-transform: uppercase;">Para Hoje</span>
+          <h3 id="stat-hoje" style="font-size: 1.8rem; color: var(--accent-gold); font-weight: 800; margin-top: 4px;">0</h3>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid rgba(16, 185, 129, 0.4); padding: 18px; border-radius: var(--radius-sm);">
+          <span style="font-size: 0.8rem; color: #34d399; text-transform: uppercase;">Confirmados</span>
+          <h3 id="stat-confirmados" style="font-size: 1.8rem; color: #34d399; font-weight: 800; margin-top: 4px;">0</h3>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid rgba(59, 130, 246, 0.4); padding: 18px; border-radius: var(--radius-sm);">
+          <span style="font-size: 0.8rem; color: #60a5fa; text-transform: uppercase;">Concluídos</span>
+          <h3 id="stat-concluidos" style="font-size: 1.8rem; color: #60a5fa; font-weight: 800; margin-top: 4px;">0</h3>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid rgba(239, 68, 68, 0.4); padding: 18px; border-radius: var(--radius-sm);">
+          <span style="font-size: 0.8rem; color: #f87171; text-transform: uppercase;">Cancelados</span>
+          <h3 id="stat-cancelados" style="font-size: 1.8rem; color: #f87171; font-weight: 800; margin-top: 4px;">0</h3>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros -->
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 18px; margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;">
+        <div style="flex: 1; min-width: 180px;">
+          <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Filtrar por Data</label>
+          <input type="date" id="filter-date" class="form-control" style="width: 100%;">
+        </div>
+        <div style="flex: 1; min-width: 180px;">
+          <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Unidade</label>
+          <select id="filter-unit" class="form-control" style="width: 100%;">
+            <option value="">Todas as Unidades</option>
+            <option value="matriz">Matriz (R. Francisco Mota, 93)</option>
+            <option value="filial">Filial (R. Alfredo Mariano, 24)</option>
+          </select>
+        </div>
+        <div style="flex: 1; min-width: 180px;">
+          <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Status</label>
+          <select id="filter-status" class="form-control" style="width: 100%;">
+            <option value="">Todos os Status</option>
+            <option value="confirmado">Confirmado</option>
+            <option value="concluido">Concluído</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+        <button id="btn-clear-filters" class="btn btn-outline" style="height: 46px; font-size: 0.85rem;">Limpar Filtros</button>
+      </div>
+
+      <!-- Lista / Tabela de Agendamentos -->
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden;">
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+            <thead>
+              <tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">
+                <th style="padding: 14px 18px;">Protocolo</th>
+                <th style="padding: 14px 18px;">Data & Horário</th>
+                <th style="padding: 14px 18px;">Cliente & WhatsApp</th>
+                <th style="padding: 14px 18px;">Serviço & Valor</th>
+                <th style="padding: 14px 18px;">Unidade & Profissional</th>
+                <th style="padding: 14px 18px;">Status</th>
+                <th style="padding: 14px 18px; text-align: right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="agendamentos-tbody">
+              <tr>
+                <td colspan="7" style="padding: 30px; text-align: center; color: var(--text-muted);">Carregando agendamentos...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer" style="padding: 30px 0; border-top: 1px solid var(--border-color);">
+    <div class="container" style="text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+      © 1992 - 2026 Barbearia do Joel · Painel Administrativo de Gestão
+    </div>
+  </footer>
+
+  <script>
+    const API_BASE = '';
+    let currentToken = localStorage.getItem('joel_admin_token') || '';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (currentToken) {
+        showDashboard();
+      } else {
+        showLogin();
+      }
+
+      document.getElementById('login-form').addEventListener('submit', handleLogin);
+      document.getElementById('btn-logout').addEventListener('click', handleLogout);
+      document.getElementById('btn-refresh').addEventListener('click', loadAgendamentos);
+      document.getElementById('filter-date').addEventListener('change', loadAgendamentos);
+      document.getElementById('filter-unit').addEventListener('change', loadAgendamentos);
+      document.getElementById('filter-status').addEventListener('change', loadAgendamentos);
+      document.getElementById('btn-clear-filters').addEventListener('click', () => {
+        document.getElementById('filter-date').value = '';
+        document.getElementById('filter-unit').value = '';
+        document.getElementById('filter-status').value = '';
+        loadAgendamentos();
+      });
+    });
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const pass = document.getElementById('admin-pass').value;
+      const errorDiv = document.getElementById('login-error');
+      errorDiv.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pass })
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+          currentToken = data.token;
+          localStorage.setItem('joel_admin_token', currentToken);
+          showDashboard();
+        } else {
+          errorDiv.textContent = data.error || 'Senha incorreta.';
+          errorDiv.style.display = 'block';
+        }
+      } catch (err) {
+        errorDiv.textContent = 'Erro ao conectar ao servidor.';
+        errorDiv.style.display = 'block';
+      }
+    }
+
+    function handleLogout() {
+      currentToken = '';
+      localStorage.removeItem('joel_admin_token');
+      showLogin();
+    }
+
+    function showLogin() {
+      document.getElementById('login-section').style.display = 'block';
+      document.getElementById('dashboard-section').style.display = 'none';
+      document.getElementById('btn-logout').style.display = 'none';
+    }
+
+    function showDashboard() {
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('dashboard-section').style.display = 'block';
+      document.getElementById('btn-logout').style.display = 'inline-block';
+      loadAgendamentos();
+    }
+
+    async function loadAgendamentos() {
+      const tbody = document.getElementById('agendamentos-tbody');
+      tbody.innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center; color: var(--text-muted);">Carregando agendamentos...</td></tr>';
+
+      const date = document.getElementById('filter-date').value;
+      const unit = document.getElementById('filter-unit').value;
+      const status = document.getElementById('filter-status').value;
+
+      const params = new URLSearchParams();
+      if (date) params.append('data', date);
+      if (unit) params.append('unidade', unit);
+      if (status) params.append('status', status);
+
+      try {
+        const res = await fetch(`/api/admin/agendamentos?${params.toString()}`, {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+
+        if (res.status === 401) {
+          handleLogout();
+          return;
+        }
+
+        const data = await res.json();
+        const list = data.agendamentos || [];
+
+        updateMetrics(list);
+        renderTable(list);
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding: 30px; text-align: center; color: #ef4444;">Erro ao carregar dados. Tente atualizar.</td></tr>';
+      }
+    }
+
+    function updateMetrics(list) {
+      const hojeStr = new Date().toISOString().split('T')[0];
+      let hoje = 0, confirmados = 0, concluidos = 0, cancelados = 0;
+
+      list.forEach(a => {
+        if (a.data === hojeStr && a.status !== 'cancelado') hoje++;
+        if (a.status === 'confirmado') confirmados++;
+        if (a.status === 'concluido') concluidos++;
+        if (a.status === 'cancelado') cancelados++;
+      });
+
+      document.getElementById('stat-total').textContent = list.length;
+      document.getElementById('stat-hoje').textContent = hoje;
+      document.getElementById('stat-confirmados').textContent = confirmados;
+      document.getElementById('stat-concluidos').textContent = concluidos;
+      document.getElementById('stat-cancelados').textContent = cancelados;
+    }
+
+    function renderTable(list) {
+      const tbody = document.getElementById('agendamentos-tbody');
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding: 40px; text-align: center; color: var(--text-muted);">Nenhum agendamento encontrado com os filtros aplicados.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = list.map(item => {
+        let statusBadge = '';
+        if (item.status === 'confirmado') {
+          statusBadge = '<span style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">CONFIRMADO</span>';
+        } else if (item.status === 'concluido') {
+          statusBadge = '<span style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">CONCLUÍDO</span>';
+        } else if (item.status === 'cancelado') {
+          statusBadge = '<span style="background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">CANCELADO</span>';
+        } else {
+          statusBadge = `<span style="background: rgba(234, 179, 8, 0.2); color: #eab308; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">${(item.status||'').toUpperCase()}</span>`;
+        }
+
+        const zapUrl = `https://wa.me/55${item.clienteTelefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${item.clienteNome}, confirmamos seu agendamento na Barbearia do Joel (#${item.id}) para ${item.data} às ${item.horario}.`)}`;
+
+        return `
+          <tr style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 14px 18px; font-family: monospace; font-weight: 700; color: var(--accent-gold);">#${item.id}</td>
+            <td style="padding: 14px 18px;">
+              <strong>${item.data}</strong><br>
+              <span style="color: var(--accent-gold); font-size: 0.85rem;">⏰ ${item.horario}</span>
+            </td>
+            <td style="padding: 14px 18px;">
+              <strong>${item.clienteNome}</strong><br>
+              <a href="${zapUrl}" target="_blank" rel="noopener" style="color: #25d366; text-decoration: none; font-size: 0.85rem;">
+                💬 ${item.clienteTelefone}
+              </a>
+            </td>
+            <td style="padding: 14px 18px;">
+              <span>${item.servico}</span><br>
+              <strong style="color: var(--accent-gold); font-size: 0.85rem;">R$ ${Number(item.preco).toFixed(2)}</strong>
+            </td>
+            <td style="padding: 14px 18px;">
+              <span style="text-transform: capitalize;">${item.unidade === 'filial' ? 'Filial (R. Alfredo Mariano)' : 'Matriz (R. Francisco Mota)'}</span><br>
+              <small style="color: var(--text-muted);">${item.profissional}</small>
+            </td>
+            <td style="padding: 14px 18px;">${statusBadge}</td>
+            <td style="padding: 14px 18px; text-align: right;">
+              <div style="display: inline-flex; gap: 6px;">
+                ${item.status === 'confirmado' ? `
+                  <button onclick="updateStatus('${item.id}', 'concluido')" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem; border-color: #3b82f6; color: #60a5fa;" title="Marcar como concluído">✓ Concluir</button>
+                  <button onclick="updateStatus('${item.id}', 'cancelado')" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem; border-color: #ef4444; color: #f87171;" title="Cancelar agendamento">✕ Cancelar</button>
+                ` : ''}
+                ${item.status === 'cancelado' ? `
+                  <button onclick="updateStatus('${item.id}', 'confirmado')" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem; border-color: #10b981; color: #34d399;" title="Reativar agendamento">Reativar</button>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function updateStatus(id, newStatus) {
+      if (!confirm(`Deseja alterar o status do agendamento #${id} para ${newStatus.toUpperCase()}?`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/agendamentos/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentToken}`
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadAgendamentos();
+        } else {
+          alert(data.error || 'Erro ao atualizar.');
+        }
+      } catch (err) {
+        alert('Erro de conexão ao atualizar status.');
+      }
+    }
+  </script>
+</body>
+</html>

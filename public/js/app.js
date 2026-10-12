@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initBookingForm();
   initPixModal();
   initFacadeLightbox();
+  initCancelModal();
 });
 
 // 1. Verificador de Status Aberto / Fechado em Tempo Real
@@ -45,24 +46,29 @@ function initBusinessStatus() {
   badge.innerHTML = `<span class="dot"></span> ${text}`;
 }
 
-// 2. Restrições do Calendário
+// 2. Restrições do Calendário e Datas
 function initDateConstraints() {
   const dateInput = document.getElementById('booking-date');
   if (!dateInput) return;
 
+  // Garante que o mínimo seja a data de hoje no fuso local
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const dd = String(today.getDate()).padStart(2, '0');
   dateInput.min = `${yyyy}-${mm}-${dd}`;
 
-  // Ao mudar a data, valida se é Segunda ou Domingo e carrega horários
   dateInput.addEventListener('change', () => {
-    const selected = new Date(dateInput.value + 'T12:00:00');
+    if (!dateInput.value) {
+      resetTimeSlots();
+      return;
+    }
+    const [ano, mes, dia] = dateInput.value.split('-').map(Number);
+    const selected = new Date(ano, mes - 1, dia, 12, 0, 0);
     const day = selected.getDay();
 
     if (day === 0 || day === 1) {
-      showToast('⚠️ A barbearia não abre aos domingos e segundas-feiras. Escolha de terça a sábado.');
+      showToast('⚠️ A barbearia não abre aos domingos e segundas-feiras. Selecione de terça a sábado.');
       dateInput.value = '';
       resetTimeSlots();
       return;
@@ -72,14 +78,16 @@ function initDateConstraints() {
   });
 }
 
-// Gera e carrega horários disponíveis para o dia selecionado
+// Gera e carrega horários disponíveis para a data, unidade e barbeiro
 async function loadAvailableTimeSlots(dateStr, dayOfWeek) {
   const timeSelect = document.getElementById('booking-time');
-  if (!timeSelect) return;
+  const unitSelect = document.getElementById('booking-unit');
+  const barberSelect = document.getElementById('booking-barber');
+  if (!timeSelect || !dateStr) return;
 
   timeSelect.innerHTML = '<option value="">Carregando horários...</option>';
 
-  const maxHour = (dayOfWeek === 6) ? 18 : 19; // Sábado fecha às 18h, outros às 19h
+  const maxHour = (dayOfWeek === 6) ? 18 : 19;
   const slots = [];
   
   for (let h = 9; h < maxHour; h++) {
@@ -88,10 +96,19 @@ async function loadAvailableTimeSlots(dateStr, dayOfWeek) {
     slots.push(`${hourStr}:30`);
   }
 
+  const unit = unitSelect ? unitSelect.value : 'matriz';
+  const barber = barberSelect ? barberSelect.value : '';
+
   try {
-    const res = await fetch(`/api/agendamentos?data=${encodeURIComponent(dateStr)}`);
+    const params = new URLSearchParams({
+      data: dateStr,
+      unidade: unit,
+      profissional: barber
+    });
+
+    const res = await fetch(`/api/agendamentos?${params.toString()}`);
     const data = await res.json();
-    const ocupados = (data.agendamentos || []).map(a => a.horario);
+    const ocupados = data.horariosOcupados || [];
 
     timeSelect.innerHTML = '<option value="">Selecione um horário disponível</option>';
     slots.forEach(slot => {
@@ -118,8 +135,12 @@ function resetTimeSlots() {
 // 3. Inicialização e Submissão do Formulário de Agendamento
 function initBookingForm() {
   const serviceSelect = document.getElementById('booking-service');
+  const unitSelect = document.getElementById('booking-unit');
+  const barberSelect = document.getElementById('booking-barber');
   const summaryService = document.getElementById('summary-service');
+  const summaryUnit = document.getElementById('summary-unit');
   const summaryPrice = document.getElementById('summary-price');
+  const dateInput = document.getElementById('booking-date');
   const form = document.getElementById('booking-form');
 
   if (serviceSelect) {
@@ -133,17 +154,64 @@ function initBookingForm() {
     });
   }
 
+  if (unitSelect) {
+    unitSelect.addEventListener('change', () => {
+      const isFilial = unitSelect.value === 'filial';
+      if (summaryUnit) {
+        summaryUnit.textContent = isFilial ? 'Filial: R. Alfredo Mariano, 24' : 'Matriz: R. Francisco Mota, 93';
+      }
+
+      // Se for Filial, ajusta os profissionais disponíveis
+      if (barberSelect) {
+        if (isFilial) {
+          barberSelect.value = 'Equipe Especializada da Casa';
+        }
+      }
+
+      // Recarrega horários se houver data selecionada
+      if (dateInput && dateInput.value) {
+        const [ano, mes, dia] = dateInput.value.split('-').map(Number);
+        const day = new Date(ano, mes - 1, dia, 12, 0, 0).getDay();
+        loadAvailableTimeSlots(dateInput.value, day);
+      }
+    });
+  }
+
+  if (barberSelect) {
+    barberSelect.addEventListener('change', () => {
+      // Se selecionou o Joel, assegura que a unidade seja a Matriz
+      if (barberSelect.value.includes('Joel') && unitSelect && unitSelect.value === 'filial') {
+        unitSelect.value = 'matriz';
+        if (summaryUnit) summaryUnit.textContent = 'Matriz: R. Francisco Mota, 93';
+      }
+
+      if (dateInput && dateInput.value) {
+        const [ano, mes, dia] = dateInput.value.split('-').map(Number);
+        const day = new Date(ano, mes - 1, dia, 12, 0, 0).getDay();
+        loadAvailableTimeSlots(dateInput.value, day);
+      }
+    });
+  }
+
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      const consentCheck = document.getElementById('consent-lgpd');
+      if (consentCheck && !consentCheck.checked) {
+        showToast('⚠️ É necessário concordar com os Termos e a Política de Privacidade (LGPD).');
+        consentCheck.focus();
+        return;
+      }
 
       const nome = document.getElementById('client-name').value.trim();
       const telefone = document.getElementById('client-phone').value.trim();
       const servicoOpt = serviceSelect.options[serviceSelect.selectedIndex];
       const servico = servicoOpt.text.split(' - ')[0];
       const preco = parseFloat(servicoOpt.getAttribute('data-price')) || 30.00;
-      const profissional = document.getElementById('booking-barber').value;
-      const data = document.getElementById('booking-date').value;
+      const unidade = unitSelect ? unitSelect.value : 'matriz';
+      const profissional = barberSelect ? barberSelect.value : 'Joel (Fundador & Barbeiro Titular)';
+      const data = dateInput ? dateInput.value : '';
       const horario = document.getElementById('booking-time').value;
       const obs = document.getElementById('booking-notes').value.trim();
 
@@ -162,6 +230,7 @@ function initBookingForm() {
           clienteTelefone: telefone,
           servico,
           preco,
+          unidade,
           profissional,
           data,
           horario,
@@ -209,7 +278,9 @@ function openConfirmationModal(agendamento, whatsappUrl) {
     modalDetails.innerHTML = `
       <p><strong>Protocolo:</strong> #${agendamento.id}</p>
       <p><strong>Cliente:</strong> ${agendamento.clienteNome}</p>
+      <p><strong>Unidade:</strong> ${agendamento.unidadeTitulo} (${agendamento.unidadeEndereco})</p>
       <p><strong>Serviço:</strong> ${agendamento.servico}</p>
+      <p><strong>Profissional:</strong> ${agendamento.profissional}</p>
       <p><strong>Data & Horário:</strong> ${agendamento.data} às ${agendamento.horario}</p>
       <p><strong>Total:</strong> R$ ${Number(agendamento.preco).toFixed(2)}</p>
     `;
@@ -316,6 +387,84 @@ function initFacadeLightbox() {
   if (modal) {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.classList.remove('active');
+    });
+  }
+}
+
+// 7. Modal de Cancelamento de Agendamento pelo Cliente
+function initCancelModal() {
+  const openBtn = document.getElementById('btn-open-cancel-modal');
+  const modal = document.getElementById('cancel-modal');
+  const closeBtn = document.getElementById('cancel-modal-close');
+  const form = document.getElementById('cancel-form');
+  const msgDiv = document.getElementById('cancel-msg');
+
+  if (openBtn && modal) {
+    openBtn.addEventListener('click', () => {
+      modal.classList.add('active');
+      if (msgDiv) msgDiv.style.display = 'none';
+      if (form) form.reset();
+    });
+  }
+
+  if (closeBtn && modal) {
+    closeBtn.addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('active');
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('cancel-input-id').value.trim();
+      const telefone = document.getElementById('cancel-input-phone').value.trim();
+
+      const btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Processando cancelamento...';
+
+      try {
+        const res = await fetch('/api/agendamentos/cancelar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, telefone })
+        });
+        const data = await res.json();
+
+        msgDiv.style.display = 'block';
+        if (data.success) {
+          msgDiv.style.color = '#34d399';
+          msgDiv.textContent = `✓ ${data.message}`;
+          showToast('✓ Agendamento cancelado com sucesso.');
+
+          // Recarrega horários se houver data no formulário principal
+          const dateInput = document.getElementById('booking-date');
+          if (dateInput && dateInput.value) {
+            const [ano, mes, dia] = dateInput.value.split('-').map(Number);
+            const day = new Date(ano, mes - 1, dia, 12, 0, 0).getDay();
+            loadAvailableTimeSlots(dateInput.value, day);
+          }
+          setTimeout(() => {
+            modal.classList.remove('active');
+          }, 2500);
+        } else {
+          msgDiv.style.color = '#ef4444';
+          msgDiv.textContent = `✕ ${data.error || 'Erro ao cancelar.'}`;
+        }
+      } catch (err) {
+        msgDiv.style.display = 'block';
+        msgDiv.style.color = '#ef4444';
+        msgDiv.textContent = 'Erro de conexão com o servidor.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✕ Cancelar este Agendamento';
+      }
     });
   }
 }
