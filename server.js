@@ -289,11 +289,11 @@ const BARBEARIA_INFO = {
   servicos: [
     { id: 'corte-social', nome: 'Corte Tradicional / Social', preco: 30.00, duracaoMin: 30, duracao: '30 min', desc: 'Tesoura e máquina, alinhamento clássico' },
     { id: 'corte-degrade', nome: 'Corte Degradê / Fade Moderno', preco: 35.00, duracaoMin: 40, duracao: '40 min', desc: 'Degradê na navalha ou máquina com transição perfeita' },
-    { id: 'barba-terapia', nome: 'Barba Clássica & Barboterapia', preco: 25.00, duracaoMin: 30, duracao: '30 min', desc: 'Toalha quente, massagem facial e navalha afiada' },
-    { id: 'combo-completo', nome: 'Combo Cabelo + Barboterapia', preco: 55.00, duracaoMin: 60, duracao: '60 min', desc: 'O pacote completo para sair no estilo' },
+    { id: 'barba-terapia', nome: 'Barboterapia & Toalha Quente', preco: 25.00, duracaoMin: 30, duracao: '30 min', desc: 'Toalha quente, massagem facial e navalha afiada' },
+    { id: 'combo-completo', nome: 'Combo Cabelo + Barba Completa', preco: 55.00, duracaoMin: 60, duracao: '60 min', desc: 'O pacote completo para sair no estilo' },
     { id: 'corte-infantil', nome: 'Corte Infantil (Kids)', preco: 30.00, duracaoMin: 30, duracao: '30 min', desc: 'Atendimento paciente e cuidadoso para os pequenos' },
-    { id: 'sobrancelha', nome: 'Acabamento & Sobrancelha', preco: 15.00, duracaoMin: 15, duracao: '15 min', desc: 'Alinhamento na navalha ou pinça' },
-    { id: 'pigmentacao', nome: 'Pigmentação de Barba / Cabelo', preco: 25.00, duracaoMin: 30, duracao: '30 min', desc: 'Disfarce de falhas e fios brancos com aspecto natural' }
+    { id: 'sobrancelha', nome: 'Acabamento & Sobrancelha', preco: 15.00, duracaoMin: 20, duracao: '20 min', desc: 'Alinhamento na navalha ou pinça' },
+    { id: 'pigmentacao', nome: 'Pigmentação / Camuflagem', preco: 25.00, duracaoMin: 30, duracao: '30 min', desc: 'Disfarce de falhas e fios brancos com aspecto natural' }
   ]
 };
 
@@ -465,7 +465,7 @@ const server = http.createServer(async (req, res) => {
 
         const nome = sanitizeText(ag.clienteNome);
         const telefone = sanitizeText(ag.clienteTelefone).replace(/\D/g, '');
-        const servicoNome = sanitizeText(ag.servico);
+        const servicoNome = sanitizeText(ag.servico || ag.servicoId);
         const data = sanitizeText(ag.data);
         const horario = sanitizeText(ag.horario);
         const unidade = (ag.unidade === 'filial') ? 'filial' : 'matriz';
@@ -533,9 +533,32 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        const servicoObj = BARBEARIA_INFO.servicos.find(s => s.nome.toLowerCase() === servicoNome.toLowerCase() || s.id === ag.servicoId);
-        const precoReal = servicoObj ? servicoObj.preco : (ag.preco || 30.00);
-        const duracaoMinReal = servicoObj ? servicoObj.duracaoMin : 30;
+        const servicoObj = BARBEARIA_INFO.servicos.find(s => {
+          if (ag.servicoId && s.id === ag.servicoId) return true;
+          if (servicoNome && s.nome.toLowerCase() === servicoNome.toLowerCase()) return true;
+          if (servicoNome && s.id.toLowerCase() === servicoNome.toLowerCase()) return true;
+          if (servicoNome) {
+            const sLower = servicoNome.toLowerCase();
+            if (s.id === 'combo-completo' && sLower.includes('combo')) return true;
+            if (s.id === 'barba-terapia' && sLower.includes('barba')) return true;
+            if (s.id === 'corte-social' && (sLower.includes('social') || sLower.includes('tradicional'))) return true;
+            if (s.id === 'corte-degrade' && (sLower.includes('degradê') || sLower.includes('degrade') || sLower.includes('fade'))) return true;
+            if (s.id === 'corte-infantil' && (sLower.includes('infantil') || sLower.includes('kids'))) return true;
+            if (s.id === 'sobrancelha' && sLower.includes('sobrancelha')) return true;
+            if (s.id === 'pigmentacao' && (sLower.includes('pigmentação') || sLower.includes('pigmentacao') || sLower.includes('camuflagem'))) return true;
+          }
+          return false;
+        });
+
+        if (!servicoObj) {
+          res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ success: false, error: 'Serviço selecionado inválido ou não cadastrado.' }));
+          return;
+        }
+
+        // Preço e duração são estritamente determinados pelo catálogo do servidor (fonte única da verdade)
+        const precoReal = servicoObj.preco;
+        const duracaoMinReal = servicoObj.duracaoMin;
 
         const slotsSolicitados = getOccupiedSlots(horario, duracaoMinReal);
 
@@ -544,7 +567,7 @@ const server = http.createServer(async (req, res) => {
           id: novoId,
           clienteNome: nome,
           clienteTelefone: telefone,
-          servico: servicoObj ? servicoObj.nome : servicoNome,
+          servico: servicoObj.nome,
           preco: precoReal,
           duracaoMin: duracaoMinReal,
           unidade: unidade,

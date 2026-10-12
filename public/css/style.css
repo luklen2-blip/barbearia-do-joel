@@ -25,6 +25,15 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 85px;
+}
+
+section {
+  scroll-margin-top: 85px;
+}
+
 body {
   font-family: var(--font-family);
   background-color: var(--bg-primary);

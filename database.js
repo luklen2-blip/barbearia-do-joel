@@ -370,6 +370,25 @@ export class DatabaseAdapter {
       });
     }
   }
+
+  async deleteById(id) {
+    if (!id) return false;
+    if (this.isPostgres) {
+      const res = await this.pool.query('DELETE FROM agendamentos WHERE UPPER(id) = UPPER($1) RETURNING id', [id.trim()]);
+      return res.rowCount > 0;
+    } else {
+      return this.mutex.lock(() => {
+        const items = this._readJson();
+        const initialLen = items.length;
+        const filtered = items.filter(a => a.id.toUpperCase() !== id.trim().toUpperCase());
+        if (filtered.length !== initialLen) {
+          this._writeJson(filtered);
+          return true;
+        }
+        return false;
+      });
+    }
+  }
 }
 
 export const db = new DatabaseAdapter();

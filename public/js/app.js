@@ -268,6 +268,10 @@ function resetTimeSlots() {
 
 // 3. Inicialização e Submissão do Formulário de Agendamento
 function initBookingForm() {
+  const form = document.getElementById('booking-form');
+  if (!form || form.dataset.initialized === 'true') return;
+  form.dataset.initialized = 'true';
+
   const serviceSelect = document.getElementById('booking-service');
   const unitSelect = document.getElementById('booking-unit');
   const barberSelect = document.getElementById('booking-barber');
@@ -276,13 +280,12 @@ function initBookingForm() {
   const summaryPrice = document.getElementById('summary-price');
   const dateInput = document.getElementById('booking-date');
   const timeSelect = document.getElementById('booking-time');
-  const form = document.getElementById('booking-form');
 
   if (serviceSelect) {
     serviceSelect.addEventListener('change', () => {
       const selectedOpt = serviceSelect.options[serviceSelect.selectedIndex];
-      const price = selectedOpt.getAttribute('data-price') || '30.00';
-      const serviceName = selectedOpt.text.split(' - ')[0] || 'Serviço Selecionado';
+      const price = selectedOpt ? selectedOpt.getAttribute('data-price') || '30.00' : '30.00';
+      const serviceName = selectedOpt ? selectedOpt.text.split(' - ')[0] : 'Serviço Selecionado';
 
       if (summaryService) summaryService.textContent = serviceName;
       if (summaryPrice) summaryPrice.textContent = `R$ ${Number(price).toFixed(2)}`;
@@ -296,13 +299,17 @@ function initBookingForm() {
     });
   }
 
-  // Pre-seleção automática ao clicar nos cards de serviços
+  // Pre-seleção automática e rolagem precisa ao clicar nos cards de serviços
   document.querySelectorAll('.btn-choose-service').forEach(btn => {
     btn.addEventListener('click', () => {
       const sId = btn.getAttribute('data-service');
       if (serviceSelect && sId) {
         serviceSelect.value = sId;
         serviceSelect.dispatchEvent(new Event('change'));
+      }
+      const bookingSec = document.getElementById('agendamento');
+      if (bookingSec) {
+        bookingSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     });
   });
@@ -392,8 +399,8 @@ function initBookingForm() {
         const payload = {
           clienteNome: nome,
           clienteTelefone: telefone,
+          servicoId: servicoOpt.value,
           servico,
-          preco,
           unidade,
           profissional,
           data,
