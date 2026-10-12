@@ -156,6 +156,69 @@ function generatePixPayload({ pixKey, name = 'BARBEARIA DO JOEL', city = 'RIO DE
   return payload + crcHex;
 }
 
+// Identificador Oficial de Feriados Nacionais e do Rio de Janeiro
+function getFeriado(dataStr) {
+  if (!dataStr || typeof dataStr !== 'string') return null;
+  const [anoStr, mesStr, diaStr] = dataStr.split('-');
+  const ano = parseInt(anoStr, 10);
+  const mesDia = `${mesStr}-${diaStr}`;
+
+  // Feriados Nacionais e do RJ de data fixa
+  const fixos = {
+    '01-01': 'Confraternização Universal (Ano Novo)',
+    '01-20': 'São Sebastião (Padroeiro da Cidade do Rio de Janeiro)',
+    '04-21': 'Tiradentes',
+    '04-23': 'São Jorge (Feriado Estadual RJ)',
+    '05-01': 'Dia do Trabalhador',
+    '09-07': 'Independência do Brasil',
+    '10-12': 'Nossa Senhora Aparecida (Padroeira do Brasil)',
+    '11-02': 'Finados',
+    '11-15': 'Proclamação da República',
+    '11-20': 'Dia Nacional de Zumbi e Consciência Negra',
+    '12-25': 'Natal'
+  };
+
+  if (fixos[mesDia]) return fixos[mesDia];
+
+  // Cálculo astronômico da Páscoa (Algoritmo de Meeus/Butcher) para feriados móveis
+  const a = ano % 19;
+  const b = Math.floor(ano / 100);
+  const c = ano % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const pascoaMes = Math.floor((h + l - 7 * m + 114) / 31);
+  const pascoaDia = ((h + l - 7 * m + 114) % 31) + 1;
+
+  const dataPascoa = new Date(Date.UTC(ano, pascoaMes - 1, pascoaDia));
+
+  const addDias = (dias) => {
+    const d = new Date(dataPascoa.getTime() + (dias * 24 * 60 * 60 * 1000));
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    return `${mm}-${dd}`;
+  };
+
+  const carnavalSeg = addDias(-48);
+  const carnavalTer = addDias(-47);
+  const quartaCinzas = addDias(-46);
+  const sextaSanta = addDias(-2);
+  const corpusChristi = addDias(60);
+
+  if (mesDia === carnavalTer || mesDia === carnavalSeg) return 'Carnaval';
+  if (mesDia === quartaCinzas) return 'Quarta-feira de Cinzas';
+  if (mesDia === sextaSanta) return 'Sexta-feira Santa';
+  if (mesDia === corpusChristi) return 'Corpus Christi';
+
+  return null;
+}
+
 // Cálculo de slots de 30 minutos ocupados por um serviço
 function getOccupiedSlots(startTime, durationMinutes = 30) {
   const [h, m] = startTime.split(':').map(Number);
@@ -218,9 +281,10 @@ const BARBEARIA_INFO = {
   ],
   horarios: {
     terca_a_sexta: { abre: '09:00', fecha: '19:00', descricao: '09:00 às 19:00' },
-    sabado: { abre: '09:00', fecha: '18:00', descricao: '09:00 às 18:00' },
+    sabado: { abre: null, fecha: null, descricao: 'Fechado' },
+    domingo: { abre: null, fecha: null, descricao: 'Fechado' },
     segunda: { abre: null, fecha: null, descricao: 'Fechado' },
-    domingo: { abre: null, fecha: null, descricao: 'Fechado' }
+    feriados: { abre: null, fecha: null, descricao: 'Fechado' }
   },
   servicos: [
     { id: 'corte-social', nome: 'Corte Tradicional / Social', preco: 30.00, duracaoMin: 30, duracao: '30 min', desc: 'Tesoura e máquina, alinhamento clássico' },
@@ -350,12 +414,36 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
+      // Checa se a data é fim de semana, segunda ou feriado
+      let fechado = false;
+      let motivoFechado = null;
+      if (dataQuery) {
+        const [y, m, d] = dataQuery.split('-').map(Number);
+        const dayOfWeek = new Date(y, m - 1, d, 12, 0, 0).getDay();
+        const feriado = getFeriado(dataQuery);
+        if (dayOfWeek === 6) {
+          fechado = true;
+          motivoFechado = 'Fechado aos sábados. Atendimento de terça a sexta-feira.';
+        } else if (dayOfWeek === 0) {
+          fechado = true;
+          motivoFechado = 'Fechado aos domingos. Atendimento de terça a sexta-feira.';
+        } else if (dayOfWeek === 1) {
+          fechado = true;
+          motivoFechado = 'Fechado às segundas-feiras. Atendimento de terça a sexta-feira.';
+        } else if (feriado) {
+          fechado = true;
+          motivoFechado = `Fechado no feriado: ${feriado}.`;
+        }
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({
         success: true,
         data: dataQuery,
         unidade: unidadeQuery,
         duracaoMin: duracaoQuery,
+        fechado,
+        motivoFechado,
         horariosOcupados: slotsOcupados,
         conflitosDuracao: conflitosDuracao,
         totalOcupados: slotsOcupados.length
@@ -411,23 +499,37 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        // Validação de dia da semana (Fechado aos Domingos e Segundas)
+        // Validação de dia da semana e feriados (Fechado aos Sábados, Domingos, Segundas e Feriados)
         const [ano, mes, dia] = data.split('-').map(Number);
         const dataObj = new Date(ano, mes - 1, dia, 12, 0, 0);
         const diaSemana = dataObj.getDay();
 
-        if (diaSemana === 0 || diaSemana === 1) {
-          res.writeHead(422, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'A barbearia não abre aos domingos e segundas-feiras. Atendimento de terça a sábado.' }));
+        if (diaSemana === 0 || diaSemana === 1 || diaSemana === 6) {
+          res.writeHead(422, { 'Content-Type': 'application/json; charset=utf-8' });
+          const diaNome = (diaSemana === 6) ? 'aos sábados' : (diaSemana === 0 ? 'aos domingos' : 'às segundas-feiras');
+          res.end(JSON.stringify({
+            success: false,
+            error: `A barbearia não abre ${diaNome}. Atendimento exclusivo de terça a sexta-feira, das 09:00 às 19:00.`
+          }));
           return;
         }
 
-        // Validação de horário comercial
+        const feriadoNome = getFeriado(data);
+        if (feriadoNome) {
+          res.writeHead(422, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({
+            success: false,
+            error: `A barbearia não abre em feriados (${feriadoNome}). Atendimento de terça a sexta-feira em dias úteis.`
+          }));
+          return;
+        }
+
+        // Validação de horário comercial (Terça a Sexta: 09:00 às 19:00)
         const [horaNum, minNum] = horario.split(':').map(Number);
-        const maxHora = (diaSemana === 6) ? 18 : 19;
+        const maxHora = 19;
         if (horaNum < 9 || horaNum > maxHora || (horaNum === maxHora && minNum > 0)) {
-          res.writeHead(422, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'Horário fora do expediente.' }));
+          res.writeHead(422, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ success: false, error: 'Horário fora do expediente (09:00 às 19:00).' }));
           return;
         }
 

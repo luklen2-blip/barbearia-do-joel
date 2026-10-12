@@ -130,9 +130,24 @@ async function runTests() {
   console.log('  ✅ Data retroativa bloqueada corretamente com HTTP 400');
   passed++;
 
-  // Teste 6: Bloqueio de Agendamento em Dias Fechados (Domingos e Segundas)
-  console.log('▶ Teste 6: Bloqueio de Agendamentos em Domingos e Segundas');
-  // 2099-01-04 é Domingo e 2099-01-05 é Segunda
+  // Teste 6: Bloqueio de Agendamento em Dias Fechados (Sábados, Domingos, Segundas e Feriados)
+  console.log('▶ Teste 6: Bloqueio Estrito de Sábados, Domingos, Segundas e Feriados');
+  // 2099-01-03 é Sábado
+  const satRes = await makeRequest({
+    path: '/api/agendamentos',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, JSON.stringify({
+    clienteNome: 'Cliente Sábado',
+    clienteTelefone: '21988887777',
+    servico: 'Corte Tradicional / Social',
+    unidade: 'matriz',
+    data: '2099-01-03',
+    horario: '10:00'
+  }));
+  assert.strictEqual(satRes.status, 422, 'Sábado deve retornar 422 Unprocessable');
+
+  // 2099-01-04 é Domingo
   const sunRes = await makeRequest({
     path: '/api/agendamentos',
     method: 'POST',
@@ -146,7 +161,37 @@ async function runTests() {
     horario: '10:00'
   }));
   assert.strictEqual(sunRes.status, 422, 'Domingo deve retornar 422 Unprocessable');
-  console.log('  ✅ Tentativa de agendamento em domingo rejeitada com HTTP 422');
+
+  // 2099-01-05 é Segunda
+  const monRes = await makeRequest({
+    path: '/api/agendamentos',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, JSON.stringify({
+    clienteNome: 'Cliente Segunda',
+    clienteTelefone: '21988887777',
+    servico: 'Corte Tradicional / Social',
+    unidade: 'matriz',
+    data: '2099-01-05',
+    horario: '10:00'
+  }));
+  assert.strictEqual(monRes.status, 422, 'Segunda deve retornar 422 Unprocessable');
+
+  // 2099-04-21 é Tiradentes (Terça-feira Feriado Nacional)
+  const holidayRes = await makeRequest({
+    path: '/api/agendamentos',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, JSON.stringify({
+    clienteNome: 'Cliente Feriado',
+    clienteTelefone: '21988887777',
+    servico: 'Corte Tradicional / Social',
+    unidade: 'matriz',
+    data: '2099-04-21',
+    horario: '10:00'
+  }));
+  assert.strictEqual(holidayRes.status, 422, 'Feriado deve retornar 422 Unprocessable');
+  console.log('  ✅ Sábados, Domingos, Segundas e Feriados bloqueados com sucesso (HTTP 422)');
   passed++;
 
   // Teste 7: Criação Válida com Unidade e Profissional

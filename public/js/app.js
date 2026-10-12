@@ -8,7 +8,61 @@ document.addEventListener('DOMContentLoaded', () => {
   initCancelModal();
 });
 
-// 1. Verificador de Status Aberto / Fechado em Tempo Real
+// Identificador Oficial de Feriados Nacionais e do Rio de Janeiro
+function getFeriado(dataStr) {
+  if (!dataStr || typeof dataStr !== 'string') return null;
+  const [anoStr, mesStr, diaStr] = dataStr.split('-');
+  const ano = parseInt(anoStr, 10);
+  const mesDia = `${mesStr}-${diaStr}`;
+
+  const fixos = {
+    '01-01': 'Ano Novo / Confraternização Universal',
+    '01-20': 'São Sebastião (Padroeiro do Rio de Janeiro)',
+    '04-21': 'Tiradentes',
+    '04-23': 'São Jorge (Feriado RJ)',
+    '05-01': 'Dia do Trabalhador',
+    '09-07': 'Independência do Brasil',
+    '10-12': 'Nossa Senhora Aparecida',
+    '11-02': 'Finados',
+    '11-15': 'Proclamação da República',
+    '11-20': 'Dia da Consciência Negra',
+    '12-25': 'Natal'
+  };
+
+  if (fixos[mesDia]) return fixos[mesDia];
+
+  const a = ano % 19;
+  const b = Math.floor(ano / 100);
+  const c = ano % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const pascoaMes = Math.floor((h + l - 7 * m + 114) / 31);
+  const pascoaDia = ((h + l - 7 * m + 114) % 31) + 1;
+  const dataPascoa = new Date(Date.UTC(ano, pascoaMes - 1, pascoaDia));
+
+  const addDias = (dias) => {
+    const res = new Date(dataPascoa.getTime() + (dias * 24 * 60 * 60 * 1000));
+    const mm = String(res.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(res.getUTCDate()).padStart(2, '0');
+    return `${mm}-${dd}`;
+  };
+
+  if (mesDia === addDias(-47) || mesDia === addDias(-48)) return 'Carnaval';
+  if (mesDia === addDias(-46)) return 'Quarta-feira de Cinzas';
+  if (mesDia === addDias(-2)) return 'Sexta-feira Santa';
+  if (mesDia === addDias(60)) return 'Corpus Christi';
+
+  return null;
+}
+
+// 1. Verificador de Status Aberto / Fechado em Tempo Real (Fechado aos Sábados, Domingos, Segundas e Feriados)
 function initBusinessStatus() {
   const badge = document.getElementById('status-badge');
   if (!badge) return;
@@ -19,27 +73,29 @@ function initBusinessStatus() {
   const minute = now.getMinutes();
   const currentTime = hour + minute / 60;
 
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const feriadoHoje = getFeriado(todayStr);
+
   let isOpen = false;
   let text = '';
 
-  if (day >= 2 && day <= 5) { // Terça a Sexta: 09h às 19h
+  if (feriadoHoje) {
+    text = `Fechado Hoje · Feriado (${feriadoHoje})`;
+  } else if (day === 6) { // Sábado
+    text = 'Fechado Hoje (Sábado) · Abre terça às 09:00';
+  } else if (day === 0) { // Domingo
+    text = 'Fechado Hoje (Domingo) · Abre terça às 09:00';
+  } else if (day === 1) { // Segunda
+    text = 'Fechado Hoje (Segunda) · Abre amanhã às 09:00';
+  } else if (day >= 2 && day <= 5) { // Terça a Sexta: 09h às 19h
     if (currentTime >= 9 && currentTime < 19) {
       isOpen = true;
       text = 'Aberto Agora · Fecha às 19:00';
+    } else if (currentTime < 9) {
+      text = 'Fechado · Abre hoje às 09:00';
     } else {
-      text = currentTime < 9 ? 'Fechado · Abre hoje às 09:00' : 'Fechado · Abre amanhã às 09:00';
+      text = day === 5 ? 'Fechado · Abre terça às 09:00' : 'Fechado · Abre amanhã às 09:00';
     }
-  } else if (day === 6) { // Sábado: 09h às 18h
-    if (currentTime >= 9 && currentTime < 18) {
-      isOpen = true;
-      text = 'Aberto Agora · Fecha às 18:00';
-    } else {
-      text = currentTime < 9 ? 'Fechado · Abre hoje às 09:00' : 'Fechado · Abre terça às 09:00';
-    }
-  } else if (day === 0) { // Domingo
-    text = 'Fechado Hoje · Abre terça às 09:00';
-  } else if (day === 1) { // Segunda
-    text = 'Fechado Hoje · Abre amanhã às 09:00';
   }
 
   badge.className = `status-badge ${isOpen ? 'open' : 'closed'}`;
@@ -51,7 +107,6 @@ function initDateConstraints() {
   const dateInput = document.getElementById('booking-date');
   if (!dateInput) return;
 
-  // Garante que o mínimo seja a data de hoje no fuso local
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -67,8 +122,28 @@ function initDateConstraints() {
     const selected = new Date(ano, mes - 1, dia, 12, 0, 0);
     const day = selected.getDay();
 
-    if (day === 0 || day === 1) {
-      showToast('⚠️ A barbearia não abre aos domingos e segundas-feiras. Selecione de terça a sábado.');
+    if (day === 6) {
+      showToast('⚠️ A barbearia fecha aos sábados. Atendimento de terça a sexta-feira.');
+      dateInput.value = '';
+      resetTimeSlots();
+      return;
+    }
+    if (day === 0) {
+      showToast('⚠️ A barbearia fecha aos domingos. Atendimento de terça a sexta-feira.');
+      dateInput.value = '';
+      resetTimeSlots();
+      return;
+    }
+    if (day === 1) {
+      showToast('⚠️ A barbearia fecha às segundas-feiras. Atendimento de terça a sexta-feira.');
+      dateInput.value = '';
+      resetTimeSlots();
+      return;
+    }
+
+    const feriado = getFeriado(dateInput.value);
+    if (feriado) {
+      showToast(`⚠️ Fechado no feriado: ${feriado}. Atendimento de terça a sexta-feira em dias úteis.`);
       dateInput.value = '';
       resetTimeSlots();
       return;
@@ -90,7 +165,7 @@ async function loadAvailableTimeSlots(dateStr, dayOfWeek) {
   const currentSelectedTime = timeSelect.value;
   timeSelect.innerHTML = '<option value="">Atualizando horários em tempo real...</option>';
 
-  const maxHour = (dayOfWeek === 6) ? 18 : 19;
+  const maxHour = 19;
   const slots = [];
   
   for (let h = 9; h < maxHour; h++) {
@@ -114,6 +189,16 @@ async function loadAvailableTimeSlots(dateStr, dayOfWeek) {
 
     const res = await fetch(`/api/agendamentos?${params.toString()}`);
     const data = await res.json();
+
+    if (data.fechado) {
+      timeSelect.innerHTML = `<option value="">${data.motivoFechado || 'Fechado nesta data'}</option>`;
+      if (slotsBadge) {
+        slotsBadge.textContent = `(${data.motivoFechado || 'Fechado'})`;
+        slotsBadge.style.color = '#ef4444';
+      }
+      return;
+    }
+
     const ocupados = data.horariosOcupados || [];
     const conflitosDuracao = data.conflitosDuracao || [];
 
