@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barbearia do Joel · Tradição e Excelência desde 1992 · Campo Grande RJ</title>
+  <meta name="description" content="Barbearia do Joel em Campo Grande, Rio de Janeiro. Mais de 30 anos oferecendo o melhor serviço da região. Agende seu corte, barba e degradê online com PIX e WhatsApp.">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d0f12">
+</head>
+<body class="mosaic-bg-subtle">
+
+  <!-- Faixa Barber Pole no Topo -->
+  <div class="barber-pole-stripes"></div>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="/" class="brand-logo">
+        <div class="pole-icon"></div>
+        <div class="brand-text">
+          <h1>Barbearia do Joel</h1>
+          <span>Desde 1992 · Tradição</span>
+        </div>
+      </a>
+
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#inicio">Início</a></li>
+          <li><a href="#servicos">Serviços</a></li>
+          <li><a href="#agendamento">Agendar</a></li>
+          <li><a href="#locais">Unidades</a></li>
+          <li><a href="#avaliacoes">Avaliações</a></li>
+        </ul>
+      </nav>
+
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div id="status-badge" class="status-badge closed">
+          <span class="dot"></span> Carregando status...
+        </div>
+        <a href="#agendamento" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.88rem;">Agendar Horário</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="inicio" class="hero">
+    <div class="container hero-grid">
+      <div class="hero-content">
+        <span class="hero-tag">💈 Mais de 30 Anos de Excelência em Campo Grande</span>
+        <h1 class="hero-title">O Melhor Serviço da Região, <span>Desde 1992</span>.</h1>
+        <p class="hero-desc">
+          Tradição, cuidado e estilo para todas as gerações. Cortes clássicos e modernos, barboterapia relaxante com toalha quente e atendimento acolhedor em ambiente 100% climatizado.
+        </p>
+
+        <div class="hero-actions">
+          <a href="#agendamento" class="btn btn-primary">
+            <span>📅 Agendar Corte Online</span>
+          </a>
+          <a href="https://wa.me/5521982156025" target="_blank" rel="noopener" class="btn btn-whatsapp">
+            <span>💬 Chamar no WhatsApp</span>
+          </a>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat-item">
+            <h3>+32</h3>
+            <p>Anos de História</p>
+          </div>
+          <div class="stat-item">
+            <h3>100%</h3>
+            <p>Ambiente Climatizado</p>
+          </div>
+          <div class="stat-item">
+            <h3>4.9 ★</h3>
+            <p>Avaliação Google</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Profissional com Foto Real da Fachada -->
+      <div class="facade-card" id="facade-showcase">
+        <div class="facade-img-wrapper" id="open-facade-lightbox" title="Clique para ver a foto em alta resolução">
+          <img src="/assets/fachada.jpg" alt="Fachada oficial da Barbearia do Joel em Campo Grande RJ" loading="lazy">
+          <div class="facade-badge-top-left">⭐ Matriz Oficial · R. Francisco Mota, 93</div>
+          <div class="facade-badge-top-right">❄️ 100% Climatizado</div>
+          <div class="facade-zoom-hint">
+            <span>🔍 Clique para ampliar</span>
+          </div>
+        </div>
+        <div class="facade-info">
+          <div class="facade-info-header">
+            <h4>Estrutura Oficial da Barbearia do Joel</h4>
+            <span class="facade-pill">Desde 1992</span>
+          </div>
+          <p class="facade-desc">Ambiente acolhedor, climatizado e tradicional, com fachada arquitetônica em pastilhas e portas em blindex no coração de Campo Grande.</p>
+          <div class="facade-features-tags">
+            <span class="ft-tag">✓ Mosaico Preto & Branco</span>
+            <span class="ft-tag">✓ Ar-Condicionado Split</span>
+            <span class="ft-tag">✓ Portas Blindex</span>
+            <span class="ft-tag">✓ Fácil Acesso</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Seção de Serviços -->
+  <section id="servicos" class="services-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="sub">Tabela de Cuidados</span>
+        <h2>Nossos Serviços & Valores</h2>
+        <p>Preços justos, profissionais experientes e produtos de primeira linha para o seu estilo.</p>
+      </div>
+
+      <div class="services-grid">
+        <!-- Serviço 1 -->
+        <div class="service-card">
+          <div>
+            <div class="service-top">
+              <h3>Corte Tradicional / Social</h3>
+              <span class="service-price">R$ 30,00</span>
+            </div>
+            <p>Alinhamento na tesoura e máquina, acabamento preciso da nuca e costeletas.</p>
+          </div>
+          <div class="service-footer">
+            <span class="service-time">⏱ ~30 minutos</span>
+            <a href="#agendamento" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;">Escolher</a>
+          </div>
+        </div>
+
+        <!-- Serviço 2 -->
+        <div class="service-card">
+          <div>
+            <div class="service-top">
+              <h3>Corte Degradê / Fade Moderno</h3>
+              <span class="service-price">R$ 35,00</span>
+            </div>
+            <p>Transição limpa na navalha ou shaver (Low, Mid, High Fade), com finalização impecável.</p>
+          </div>
+          <div class="service-footer">
+            <span class="service-time">⏱ ~40 minutos</span>
+            <a href="#agendamento" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;">Escolher</a>
+          </div>
+        </div>
+
+        <!-- Serviço 3 -->
+        <div class="service-card">
+          <div>
+            <div class="service-top">
+              <h3>Barboterapia & Toalha Quente</h3>
+              <span class="service-price">R$ 25,00</span>
+            </div>
+            <p>Tratamento com toalha aquecida, óleos essenciais, massagem relaxante e navalha esterilizada.</p>
+          </div>
+          <div class="service-footer">
+            <span class="service-time">⏱ ~30 minutos</span>
+            <a href="#agendamento" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;">Escolher</a>
+          </div>
+        </div>
+
+        <!-- Serviço 4 -->
+        <div class="service-card">
+          <div>
+            <div class="service-top">
+              <h3>Combo Cabelo + Barba Completa</h3>
+              <span class="service-price">R$ 55,00</span>
+            </div>
+            <p>O pacote completo para renovar o visual e a autoestima. Economia e máxima dedicação.</p>
+          </div>
+          <div class="service-footer">
+            <span class="service-time">⏱ ~60 minutos</span>
+            <a href="#agendamento" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">Mais Pedido</a>
+          </div>
+        </div>
+
+        <!-- Serviço 5 -->
+        <div class="service-card">
+          <div>
+            <div class="service-top">
+              <h3>Corte Infantil (Kids)</h3>
+              <span class="service-price">R$ 30,00</span>
+            </div>
+            <p>Paciência, carinho e técnica para que as crianças tenham uma experiência tranquila e divertida.</p>
+          </div>
+          <div class="service-footer">
+            <span class="service-time">⏱ ~30 minutos</span>
+            <a href="#agendamento" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;">Escolher</a>
+          </div>
+        </div>
+
+        <!-- Serviço 6 -->
+        <div class="service-card">
+          <div>
+            <div class="service-top">
+              <h3>Pigmentação / Camuflagem</h3>
+              <span class="service-price">R$ 25,00</span>
+            </div>
+            <p>Disfarce natural de fios brancos e imperfeições na barba ou cabelo com tinta especial suave.</p>
+          </div>
+          <div class="service-footer">
+            <span class="service-time">⏱ ~30 minutos</span>
+            <a href="#agendamento" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;">Escolher</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Módulo de Agendamento Online -->
+  <section id="agendamento" class="booking-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="sub">Reserve sua Cadeira</span>
+        <h2>Agendamento Rápido & Sem Fila</h2>
+        <p>Escolha seu serviço, data e horário ideal. Confirmação instantânea com opção de PIX.</p>
+      </div>
+
+      <div class="booking-box">
+        <form id="booking-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="client-name">Seu Nome Completo *</label>
+              <input type="text" id="client-name" class="form-control" placeholder="Ex: Carlos da Silva" required>
+            </div>
+
+            <div class="form-group">
+              <label for="client-phone">Seu WhatsApp *</label>
+              <input type="tel" id="client-phone" class="form-control" placeholder="(21) 98765-4321" required>
+            </div>
+
+            <div class="form-group">
+              <label for="booking-service">Selecione o Serviço *</label>
+              <select id="booking-service" class="form-control" required>
+                <option value="">Selecione um serviço...</option>
+                <option value="corte-social" data-price="30.00">Corte Tradicional / Social - R$ 30,00</option>
+                <option value="corte-degrade" data-price="35.00">Corte Degradê / Fade - R$ 35,00</option>
+                <option value="barba-terapia" data-price="25.00">Barba & Barboterapia - R$ 25,00</option>
+                <option value="combo-completo" data-price="55.00">Combo Cabelo + Barba - R$ 55,00</option>
+                <option value="corte-infantil" data-price="30.00">Corte Infantil - R$ 30,00</option>
+                <option value="sobrancelha" data-price="15.00">Acabamento & Sobrancelha - R$ 15,00</option>
+                <option value="pigmentacao" data-price="25.00">Pigmentação Barba/Cabelo - R$ 25,00</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="booking-barber">Profissional Preferido</label>
+              <select id="booking-barber" class="form-control">
+                <option value="Joel / Barbeiro Titular">Joel (Fundador & Barbeiro Titular)</option>
+                <option value="Equipe da Casa">Qualquer profissional disponível</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="booking-date">Data do Atendimento * (Terça a Sábado)</label>
+              <input type="date" id="booking-date" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+              <label for="booking-time">Horário Disponível *</label>
+              <select id="booking-time" class="form-control" required>
+                <option value="">Selecione primeiro uma data acima...</option>
+              </select>
+            </div>
+
+            <div class="form-group full">
+              <label for="booking-notes">Observações ou Preferências de Estilo (Opcional)</label>
+              <input type="text" id="booking-notes" class="form-control" placeholder="Ex: Fade bem baixo na navalha, corte militar, toalha extra quente...">
+            </div>
+          </div>
+
+          <!-- Resumo de Custos -->
+          <div class="booking-summary">
+            <div class="summary-row">
+              <span>Serviço Selecionado:</span>
+              <strong id="summary-service">Nenhum selecionado</strong>
+            </div>
+            <div class="summary-row">
+              <span>Local do Atendimento:</span>
+              <strong>Matriz: R. Francisco Mota, 93</strong>
+            </div>
+            <div class="summary-row total">
+              <span>Valor Total Estimado:</span>
+              <span id="summary-price">R$ 0,00</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            <button type="submit" class="btn btn-primary" style="flex: 1; padding: 14px;">
+              Confirmar Agendamento Online
+            </button>
+            <a href="https://wa.me/5521982156025" target="_blank" rel="noopener" class="btn btn-whatsapp" style="padding: 14px 20px;">
+              <span>💬 Dúvidas no WhatsApp</span>
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Seção de Localização & Unidades -->
+  <section id="locais" class="location-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="sub">Onde nos encontrar</span>
+        <h2>Nossas Unidades em Campo Grande</h2>
+        <p>Fácil acesso, ambiente climatizado e ponto tradicional no bairro.</p>
+      </div>
+
+      <div class="locations-grid">
+        <!-- Matriz -->
+        <div class="location-card featured">
+          <span class="location-tag">⭐ Unidade Matriz (Principal)</span>
+          <h3>Rua Francisco Mota, 93</h3>
+          <p>Campo Grande, Rio de Janeiro - RJ · CEP 23013-630</p>
+
+          <ul class="hours-list">
+            <li><span>Terça a Sexta-feira:</span> <strong>09:00 às 19:00</strong></li>
+            <li><span>Sábado:</span> <strong>09:00 às 18:00</strong></li>
+            <li><span>Segunda-feira:</span> <span style="color: var(--accent-red);">Fechado</span></li>
+            <li><span>Domingo:</span> <span style="color: var(--accent-red);">Fechado</span></li>
+          </ul>
+
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="https://maps.google.com/?q=R.+Francisco+Mota,+93+-+Campo+Grande,+Rio+de+Janeiro+-+RJ" target="_blank" rel="noopener" class="btn btn-outline" style="font-size: 0.85rem;">
+              📍 Abrir no Google Maps
+            </a>
+            <a href="https://waze.com/ul?q=Rua+Francisco+Mota+93+Campo+Grande+RJ" target="_blank" rel="noopener" class="btn btn-outline" style="font-size: 0.85rem;">
+              🚗 Abrir no Waze
+            </a>
+          </div>
+        </div>
+
+        <!-- Filial -->
+        <div class="location-card">
+          <span class="location-tag" style="background: #4b5563; color: #fff;">Unidade Filial</span>
+          <h3>Rua Alfredo Mariano, 24</h3>
+          <p>Campo Grande, Rio de Janeiro - RJ</p>
+
+          <ul class="hours-list">
+            <li><span>Terça a Sexta-feira:</span> <strong>09:00 às 19:00</strong></li>
+            <li><span>Sábado:</span> <strong>09:00 às 18:00</strong></li>
+            <li><span>Segunda-feira:</span> <span style="color: var(--accent-red);">Fechado</span></li>
+            <li><span>Domingo:</span> <span style="color: var(--accent-red);">Fechado</span></li>
+          </ul>
+
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="https://maps.google.com/?q=R.+Alfredo+Mariano,+24+-+Campo+Grande,+Rio+de+Janeiro+-+RJ" target="_blank" rel="noopener" class="btn btn-outline" style="font-size: 0.85rem;">
+              📍 Abrir no Google Maps
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Avaliações Reais de Clientes -->
+  <section id="avaliacoes" class="reviews-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="sub">Depoimentos</span>
+        <h2>O que nossos clientes dizem</h2>
+        <p>A confiança de três décadas conquistada corte a corte.</p>
+      </div>
+
+      <div class="reviews-grid">
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">"Ótima experiência! Muito atenciosos, ambiente climatizado e corte perfeito. Corto o cabelo com o Joel há anos e nunca decepciona."</p>
+          <div class="review-author">— Cliente Verificado no Google Maps</div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">"A barbearia mais tradicional de Campo Grande. Levo meu filho desde pequeno, o cuidado e o respeito com as crianças é impressionante."</p>
+          <div class="review-author">— Rodrigo M., Campo Grande RJ</div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">"A barboterapia com toalha quente é sensacional, relaxamento total depois de um dia de trabalho puxado. Recomendo demais!"</p>
+          <div class="review-author">— Marcelo S., Rio de Janeiro</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer Oficial -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h4 style="color: var(--accent-gold); font-size: 1.2rem;">💈 Barbearia do Joel</h4>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 14px;">
+            Desde 1992 oferecendo o melhor serviço da região. Tradição, precisão e bem-estar masculino no coração de Campo Grande, Rio de Janeiro.
+          </p>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">
+            <strong>Telefone / WhatsApp:</strong> (21) 98215-6025
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navegação</h4>
+          <ul>
+            <li><a href="#inicio">Início</a></li>
+            <li><a href="#servicos">Tabela de Serviços</a></li>
+            <li><a href="#agendamento">Agendar Horário</a></li>
+            <li><a href="#locais">Nossas Unidades</a></li>
+            <li><a href="#avaliacoes">Avaliações</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Institucional</h4>
+          <ul>
+            <li><a href="/termos">Termos de Uso</a></li>
+            <li><a href="/privacidade">Política de Privacidade (LGPD)</a></li>
+            <li><a href="https://instagram.com/barbearia.do.joel" target="_blank" rel="noopener">Instagram Oficial</a></li>
+            <li><a href="https://wa.me/5521982156025" target="_blank" rel="noopener">Suporte WhatsApp</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Pagamentos</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">Aceitamos PIX instantâneo oficial, cartões de crédito, débito e dinheiro.</p>
+          <span class="btn btn-pix" style="font-size: 0.75rem; padding: 4px 10px; cursor: default;">⚡ PIX Disponível</span>
+        </div>
+      </div>
+
+      <div class="legal-notice">
+        <strong>Aviso Legal & Ético:</strong> Este website é a plataforma de agendamento e apresentação da Barbearia do Joel. Agendamentos e transações de pagamento online devem ser realizados por maiores de 18 anos ou com supervisão dos responsáveis legais. Cumprimos integralmente a Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018) e o Estatuto da Criança e do Adolescente (ECA).
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 1992 - 2026 Barbearia do Joel. Todos os direitos reservados.</div>
+        <div>Desenvolvido com excelência técnica para Luciano.</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal PIX e Confirmação de Agendamento -->
+  <div id="pix-modal" class="modal-overlay">
+    <div class="modal-content">
+      <button id="modal-close-btn" class="modal-close">&times;</button>
+      <div style="font-size: 2.5rem; margin-bottom: 10px;">🎉</div>
+      <h3 style="color: var(--accent-gold); margin-bottom: 8px;">Agendamento Confirmado!</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
+        Seu horário foi reservado com sucesso no sistema.
+      </p>
+
+      <div id="modal-booking-details" style="background: var(--bg-secondary); padding: 14px; border-radius: 8px; text-align: left; font-size: 0.85rem; margin-bottom: 16px;"></div>
+
+      <div style="border-top: 1px dashed var(--border-color); padding-top: 14px; margin-top: 14px;">
+        <h4 style="color: #fff; font-size: 0.95rem; margin-bottom: 6px;">Pagamento Opcional de Sinal (PIX)</h4>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+          Escaneie o QR Code ou copie a chave Pix para garantir seu atendimento prioritário:
+        </p>
+
+        <div class="qr-wrapper">
+          <img id="pix-qr-img" src="" alt="QR Code PIX Banco Central">
+        </div>
+
+        <input type="text" id="pix-copia-cola" class="pix-copia-cola-box" readonly>
+        <button id="btn-copy-pix" class="btn btn-outline" style="width: 100%; margin-bottom: 14px; font-size: 0.85rem;">
+          📋 Copiar Código PIX Copia-e-Cola
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <a id="modal-btn-whatsapp" href="#" target="_blank" rel="noopener" class="btn btn-whatsapp" style="width: 100%;">
+          💬 Enviar Comprovante no WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox Modal da Fachada -->
+  <div id="facade-lightbox-modal" class="modal-overlay">
+    <div class="lightbox-content">
+      <button id="lightbox-close-btn" class="modal-close">&times;</button>
+      <img src="/assets/fachada.jpg" alt="Foto Real da Fachada da Barbearia do Joel" class="lightbox-img">
+      <div class="lightbox-caption">
+        <h4>Barbearia do Joel — Fachada Oficial</h4>
+        <p>Rua Francisco Mota, 93 - Campo Grande, Rio de Janeiro - RJ · Desde 1992</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botão Flutuante do WhatsApp -->
+  <a href="https://wa.me/5521982156025" target="_blank" rel="noopener" class="floating-whatsapp" title="Falar no WhatsApp com a Barbearia do Joel">
+    💬
+  </a>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

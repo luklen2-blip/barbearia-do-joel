@@ -1,0 +1,16 @@
+{
+  "name": "Barbearia do Joel",
+  "short_name": "Joel Barbearia",
+  "description": "Website Oficial e Agendamentos da Barbearia do Joel em Campo Grande - RJ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0f12",
+  "theme_color": "#0d0f12",
+  "icons": [
+    {
+      "src": "/assets/fachada.jpg",
+      "sizes": "192x192 512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

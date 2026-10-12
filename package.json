@@ -1,0 +1,22 @@
+{
+  "name": "barbearia-do-joel",
+  "version": "2.0.0",
+  "description": "Website Oficial e Sistema de Agendamento da Barbearia do Joel - Desde 1992",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/run_all.js",
+    "test:live": "node tests/test_cloud_live.js"
+  },
+  "keywords": [
+    "barbearia",
+    "campo-grande",
+    "rio-de-janeiro",
+    "agendamento",
+    "pix",
+    "barbearia-do-joel"
+  ],
+  "author": "Luciano",
+  "license": "ISC"
+}

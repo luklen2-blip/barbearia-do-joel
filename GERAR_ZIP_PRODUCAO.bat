@@ -1,0 +1,11 @@
+@echo off
+title Gerador de Pacote de Deploy - Barbearia do Joel
+cd /d "C:\Users\luciano\.gemini\antigravity\scratch\barbearia-do-joel"
+echo Gerando pacote limpo de deploy para a nuvem...
+powershell -Command "Compress-Archive -Path 'package.json', 'server.js', 'render.yaml', 'Dockerfile', '.gitignore', '.dockerignore', 'README.md', 'public', 'tests', 'data' -DestinationPath 'C:\Users\luciano\OneDrive\Desktop\barbearia-do-joel-deploy.zip' -Force; if (Test-Path 'C:\Users\luciano\Desktop') { Copy-Item 'C:\Users\luciano\OneDrive\Desktop\barbearia-do-joel-deploy.zip' 'C:\Users\luciano\Desktop\barbearia-do-joel-deploy.zip' -Force }"
+echo.
+echo ========================================================
+echo [OK] Pacote gerado com sucesso: barbearia-do-joel-deploy.zip
+echo Pronto para upload no Render, Railway ou GitHub!
+echo ========================================================
+pause

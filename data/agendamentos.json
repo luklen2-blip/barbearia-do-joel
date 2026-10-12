@@ -1,0 +1,44 @@
+[
+  {
+    "id": "JOEL-1161",
+    "clienteNome": "Cliente de Teste Automatizado",
+    "clienteTelefone": "21999999999",
+    "servico": "Corte Tradicional / Social",
+    "preco": 30,
+    "profissional": "Joel / Equipe",
+    "data": "2026-10-12",
+    "horario": "10:00",
+    "observacoes": "",
+    "formaPagamento": "No Local / PIX",
+    "status": "confirmado",
+    "criadoEm": "2026-10-12T18:22:21.161Z"
+  },
+  {
+    "id": "JOEL-4150",
+    "clienteNome": "Cliente de Teste Automatizado",
+    "clienteTelefone": "21999999999",
+    "servico": "Corte Tradicional / Social",
+    "preco": 30,
+    "profissional": "Joel / Equipe",
+    "data": "2099-01-03",
+    "horario": "18:18",
+    "observacoes": "",
+    "formaPagamento": "No Local / PIX",
+    "status": "confirmado",
+    "criadoEm": "2026-10-12T18:24:14.150Z"
+  },
+  {
+    "id": "JOEL-8730",
+    "clienteNome": "Cliente de Teste Automatizado",
+    "clienteTelefone": "21999999999",
+    "servico": "Corte Tradicional / Social",
+    "preco": 30,
+    "profissional": "Joel / Equipe",
+    "data": "2099-01-11",
+    "horario": "15:16",
+    "observacoes": "",
+    "formaPagamento": "No Local / PIX",
+    "status": "confirmado",
+    "criadoEm": "2026-10-12T18:37:08.730Z"
+  }
+]

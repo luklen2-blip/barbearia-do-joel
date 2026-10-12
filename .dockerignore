@@ -1,0 +1,7 @@
+node_modules/
+.git/
+*.log
+.system_generated/
+scratch/
+.env
+*.bat
