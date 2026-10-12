@@ -296,6 +296,17 @@ function initBookingForm() {
     });
   }
 
+  // Pre-seleção automática ao clicar nos cards de serviços
+  document.querySelectorAll('.btn-choose-service').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sId = btn.getAttribute('data-service');
+      if (serviceSelect && sId) {
+        serviceSelect.value = sId;
+        serviceSelect.dispatchEvent(new Event('change'));
+      }
+    });
+  });
+
   if (unitSelect) {
     unitSelect.addEventListener('change', () => {
       const isFilial = unitSelect.value === 'filial';
