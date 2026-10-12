@@ -78,14 +78,17 @@ function initDateConstraints() {
   });
 }
 
-// Gera e carrega horários disponíveis para a data, unidade e barbeiro
+// Gera e carrega horários disponíveis para a data, unidade e barbeiro em tempo real
 async function loadAvailableTimeSlots(dateStr, dayOfWeek) {
   const timeSelect = document.getElementById('booking-time');
   const unitSelect = document.getElementById('booking-unit');
   const barberSelect = document.getElementById('booking-barber');
+  const serviceSelect = document.getElementById('booking-service');
+  const slotsBadge = document.getElementById('slots-badge');
   if (!timeSelect || !dateStr) return;
 
-  timeSelect.innerHTML = '<option value="">Carregando horários...</option>';
+  const currentSelectedTime = timeSelect.value;
+  timeSelect.innerHTML = '<option value="">Atualizando horários em tempo real...</option>';
 
   const maxHour = (dayOfWeek === 6) ? 18 : 19;
   const slots = [];
@@ -98,37 +101,83 @@ async function loadAvailableTimeSlots(dateStr, dayOfWeek) {
 
   const unit = unitSelect ? unitSelect.value : 'matriz';
   const barber = barberSelect ? barberSelect.value : '';
+  const selectedServiceOpt = (serviceSelect && serviceSelect.selectedIndex >= 0) ? serviceSelect.options[serviceSelect.selectedIndex] : null;
+  const duracaoMin = selectedServiceOpt ? parseInt(selectedServiceOpt.getAttribute('data-duration') || '30', 10) : 30;
 
   try {
     const params = new URLSearchParams({
       data: dateStr,
       unidade: unit,
-      profissional: barber
+      profissional: barber,
+      duracaoMin: duracaoMin
     });
 
     const res = await fetch(`/api/agendamentos?${params.toString()}`);
     const data = await res.json();
     const ocupados = data.horariosOcupados || [];
+    const conflitosDuracao = data.conflitosDuracao || [];
 
     timeSelect.innerHTML = '<option value="">Selecione um horário disponível</option>';
+    let livresCount = 0;
+
     slots.forEach(slot => {
       const isOcupado = ocupados.includes(slot);
+      const isConflitoDuracao = (duracaoMin > 30 && conflitosDuracao.includes(slot));
+
+      const [h, m] = slot.split(':').map(Number);
+      const slotEndMin = h * 60 + m + duracaoMin;
+      const exceedsBusinessHours = (slotEndMin > maxHour * 60);
+
       const opt = document.createElement('option');
       opt.value = slot;
-      opt.textContent = isOcupado ? `${slot} (Ocupado)` : slot;
-      opt.disabled = isOcupado;
+
+      if (isOcupado) {
+        opt.textContent = `${slot} (✕ Ocupado)`;
+        opt.disabled = true;
+      } else if (isConflitoDuracao) {
+        opt.textContent = `${slot} (✕ Indisponível - precisa de ${duracaoMin} min livres)`;
+        opt.disabled = true;
+      } else if (exceedsBusinessHours) {
+        opt.textContent = `${slot} (✕ Fora do Expediente)`;
+        opt.disabled = true;
+      } else {
+        opt.textContent = `${slot} (✓ Disponível)`;
+        opt.disabled = false;
+        livresCount++;
+      }
+
+      // Restaura seleção anterior se continuar disponível
+      if (currentSelectedTime === slot && !opt.disabled) {
+        opt.selected = true;
+      }
+
       timeSelect.appendChild(opt);
     });
+
+    if (slotsBadge) {
+      if (livresCount > 0) {
+        slotsBadge.textContent = `(${livresCount} horário${livresCount > 1 ? 's' : ''} livre${livresCount > 1 ? 's' : ''})`;
+        slotsBadge.style.color = '#10b981';
+      } else {
+        slotsBadge.textContent = '(Dia lotado - escolha outra data)';
+        slotsBadge.style.color = '#ef4444';
+      }
+    }
   } catch (err) {
     console.error('Erro ao buscar horários:', err);
     timeSelect.innerHTML = '<option value="">Erro ao carregar horários</option>';
+    if (slotsBadge) slotsBadge.textContent = '';
   }
 }
 
 function resetTimeSlots() {
   const timeSelect = document.getElementById('booking-time');
+  const slotsBadge = document.getElementById('slots-badge');
   if (timeSelect) {
     timeSelect.innerHTML = '<option value="">Selecione primeiro uma data válida</option>';
+  }
+  if (slotsBadge) {
+    slotsBadge.textContent = '';
   }
 }
 
@@ -141,6 +190,7 @@ function initBookingForm() {
   const summaryUnit = document.getElementById('summary-unit');
   const summaryPrice = document.getElementById('summary-price');
   const dateInput = document.getElementById('booking-date');
+  const timeSelect = document.getElementById('booking-time');
   const form = document.getElementById('booking-form');
 
   if (serviceSelect) {
@@ -151,6 +201,13 @@ function initBookingForm() {
 
       if (summaryService) summaryService.textContent = serviceName;
       if (summaryPrice) summaryPrice.textContent = `R$ ${Number(price).toFixed(2)}`;
+
+      // Recalcula disponibilidade de slots considerando a duração do serviço selecionado
+      if (dateInput && dateInput.value) {
+        const [ano, mes, dia] = dateInput.value.split('-').map(Number);
+        const day = new Date(ano, mes - 1, dia, 12, 0, 0).getDay();
+        loadAvailableTimeSlots(dateInput.value, day);
+      }
     });
   }
 
@@ -185,6 +242,17 @@ function initBookingForm() {
         if (summaryUnit) summaryUnit.textContent = 'Matriz: R. Francisco Mota, 93';
       }
 
+      if (dateInput && dateInput.value) {
+        const [ano, mes, dia] = dateInput.value.split('-').map(Number);
+        const day = new Date(ano, mes - 1, dia, 12, 0, 0).getDay();
+        loadAvailableTimeSlots(dateInput.value, day);
+      }
+    });
+  }
+
+  // Atualização em tempo real quando o cliente clica no seletor de horários
+  if (timeSelect) {
+    timeSelect.addEventListener('focus', () => {
       if (dateInput && dateInput.value) {
         const [ano, mes, dia] = dateInput.value.split('-').map(Number);
         const day = new Date(ano, mes - 1, dia, 12, 0, 0).getDay();
@@ -246,6 +314,15 @@ function initBookingForm() {
         const result = await res.json();
 
         if (!result.success) {
+          // Se for conflito de horário concorrente (outro cliente acabou de reservar)
+          if (res.status === 409 || result.conflict) {
+            showToast(`⚠️ Horário das ${horario} acabou de ser reservado por outro cliente.`);
+            const [ano, mes, dia] = data.split('-').map(Number);
+            const day = new Date(ano, mes - 1, dia, 12, 0, 0).getDay();
+            await loadAvailableTimeSlots(data, day);
+            if (timeSelect) timeSelect.focus();
+            return;
+          }
           throw new Error(result.error || 'Falha ao realizar agendamento.');
         }
 

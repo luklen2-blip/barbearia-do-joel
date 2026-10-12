@@ -306,34 +306,58 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 4. Listagem Pública de Horários Ocupados (sem dados pessoais)
+  // 4. Listagem Pública de Horários Ocupados (sem dados pessoais - Prevenção Automática de Conflito)
   if (pathname === '/api/agendamentos' && req.method === 'GET') {
     try {
       const dataQuery = parsedUrl.searchParams.get('data');
       const unidadeQuery = parsedUrl.searchParams.get('unidade') || 'matriz';
       const profissionalQuery = parsedUrl.searchParams.get('profissional');
+      const duracaoQuery = parseInt(parsedUrl.searchParams.get('duracaoMin') || '30', 10);
 
-      const filtros = { status: 'confirmado' };
-      if (dataQuery) filtros.data = dataQuery;
-      if (unidadeQuery) filtros.unidade = unidadeQuery;
-      if (profissionalQuery) filtros.profissional = profissionalQuery;
-
-      const agendamentos = await db.getAll(filtros);
+      const agendamentos = await db.getAll({ data: dataQuery });
 
       const slotsOcupados = [];
       agendamentos.forEach(a => {
-        const s = getOccupiedSlots(a.horario, a.duracaoMin || 30);
-        s.forEach(slot => {
-          if (!slotsOcupados.includes(slot)) slotsOcupados.push(slot);
-        });
+        if (a.status === 'cancelado') return;
+
+        // Se for na mesma unidade OU se envolver o fundador Joel OU o mesmo profissional
+        const isSameUnit = (a.unidade === unidadeQuery);
+        const isJoel = (a.profissional.includes('Joel') || (profissionalQuery && profissionalQuery.includes('Joel')));
+        const isSameBarber = (profissionalQuery && a.profissional === profissionalQuery);
+
+        if (isSameUnit || isJoel || isSameBarber) {
+          const s = getOccupiedSlots(a.horario, a.duracaoMin || 30);
+          s.forEach(slot => {
+            if (!slotsOcupados.includes(slot)) slotsOcupados.push(slot);
+          });
+        }
       });
+
+      // Identifica slots que causariam sobreposição caso o serviço solicitado dure mais de 30 min
+      const conflitosDuracao = [];
+      if (duracaoQuery > 30) {
+        slotsOcupados.forEach(slot => {
+          const [h, m] = slot.split(':').map(Number);
+          const prevTotalMin = h * 60 + m - 30;
+          if (prevTotalMin >= 9 * 60) {
+            const prevH = Math.floor(prevTotalMin / 60);
+            const prevM = prevTotalMin % 60;
+            const prevSlot = `${String(prevH).padStart(2, '0')}:${String(prevM).padStart(2, '0')}`;
+            if (!slotsOcupados.includes(prevSlot) && !conflitosDuracao.includes(prevSlot)) {
+              conflitosDuracao.push(prevSlot);
+            }
+          }
+        });
+      }
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({
         success: true,
         data: dataQuery,
         unidade: unidadeQuery,
+        duracaoMin: duracaoQuery,
         horariosOcupados: slotsOcupados,
+        conflitosDuracao: conflitosDuracao,
         totalOcupados: slotsOcupados.length
       }));
     } catch (err) {
@@ -436,8 +460,12 @@ const server = http.createServer(async (req, res) => {
         const result = await db.create(novoAgendamento, slotsSolicitados);
 
         if (result.conflict) {
-          res.writeHead(409, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'O horário selecionado já está ocupado para este profissional. Por favor escolha outro horário.' }));
+          res.writeHead(409, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({
+            success: false,
+            conflict: true,
+            error: 'O horário selecionado já foi reservado por outro cliente nesta unidade. Por favor, escolha outro horário disponível na lista.'
+          }));
           return;
         }
 

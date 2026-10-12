@@ -235,13 +235,13 @@
               <label for="booking-service">Selecione o Serviço *</label>
               <select id="booking-service" class="form-control" required>
                 <option value="">Selecione um serviço...</option>
-                <option value="corte-social" data-price="30.00">Corte Tradicional / Social - R$ 30,00</option>
-                <option value="corte-degrade" data-price="35.00">Corte Degradê / Fade - R$ 35,00</option>
-                <option value="barba-terapia" data-price="25.00">Barba & Barboterapia - R$ 25,00</option>
-                <option value="combo-completo" data-price="55.00">Combo Cabelo + Barba - R$ 55,00</option>
-                <option value="corte-infantil" data-price="30.00">Corte Infantil - R$ 30,00</option>
-                <option value="sobrancelha" data-price="15.00">Acabamento & Sobrancelha - R$ 15,00</option>
-                <option value="pigmentacao" data-price="25.00">Pigmentação Barba/Cabelo - R$ 25,00</option>
+                <option value="corte-social" data-price="30.00" data-duration="30">Corte Tradicional / Social - R$ 30,00 (30 min)</option>
+                <option value="corte-degrade" data-price="35.00" data-duration="40">Corte Degradê / Fade - R$ 35,00 (40 min)</option>
+                <option value="barba-terapia" data-price="25.00" data-duration="30">Barba & Barboterapia - R$ 25,00 (30 min)</option>
+                <option value="combo-completo" data-price="55.00" data-duration="60">Combo Cabelo + Barba - R$ 55,00 (60 min)</option>
+                <option value="corte-infantil" data-price="30.00" data-duration="30">Corte Infantil - R$ 30,00 (30 min)</option>
+                <option value="sobrancelha" data-price="15.00" data-duration="20">Acabamento & Sobrancelha - R$ 15,00 (20 min)</option>
+                <option value="pigmentacao" data-price="25.00" data-duration="30">Pigmentação Barba/Cabelo - R$ 25,00 (30 min)</option>
               </select>
             </div>
 
@@ -267,7 +267,7 @@
             </div>
 
             <div class="form-group">
-              <label for="booking-time">Horário Disponível *</label>
+              <label for="booking-time">Horário Disponível * <span id="slots-badge" style="font-size: 0.8rem; font-weight: normal; color: var(--accent-gold); margin-left: 8px;"></span></label>
               <select id="booking-time" class="form-control" required>
                 <option value="">Selecione primeiro uma data acima...</option>
               </select>

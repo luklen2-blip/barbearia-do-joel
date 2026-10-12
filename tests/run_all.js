@@ -176,8 +176,9 @@ async function runTests() {
   console.log(`  ✅ Agendamento #${protocolId} criado com sucesso`);
   passed++;
 
-  // Teste 8: Detecção e Prevenção de Conflito de Horário e Concorrência Atômica
-  console.log('▶ Teste 8: Prevenção de Conflito para o Mesmo Profissional');
+  // Teste 8: Detecção e Prevenção Automática de Conflito de Horário e Concorrência Atômica
+  console.log('▶ Teste 8: Prevenção Automática de Conflito de Horário (Zero Double-Booking)');
+  // 8a: Conflito para o mesmo profissional
   const conflictRes = await makeRequest({
     path: '/api/agendamentos',
     method: 'POST',
@@ -192,9 +193,53 @@ async function runTests() {
     horario: horaValida
   }));
   assert.strictEqual(conflictRes.status, 409, 'Horário conflitante deve retornar 409 Conflict');
-  console.log('  ✅ Conflito detectado e impedido com sucesso (HTTP 409)');
 
-  // Teste 8b: Concorrência Simultânea Atômica (Dois clientes ao mesmo tempo)
+  // 8b: Conflito na mesma unidade mesmo com profissional diferente (ex: Joel vs Equipe)
+  const crossBarberRes = await makeRequest({
+    path: '/api/agendamentos',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, JSON.stringify({
+    clienteNome: 'Cliente com Outro Profissional',
+    clienteTelefone: '21999997777',
+    servico: 'Corte Tradicional / Social',
+    unidade: 'matriz',
+    profissional: 'Equipe Especializada da Casa',
+    data: dataValida,
+    horario: horaValida
+  }));
+  assert.strictEqual(crossBarberRes.status, 409, 'Mesma unidade e mesmo horário deve retornar 409 independente do profissional');
+  console.log('  ✅ Bloqueio estrito por unidade validado: impossível dois clientes no mesmo horário na Matriz (HTTP 409)');
+
+  // 8c: Conflito de colisão por duração (serviço de 60 min que invade o horário 14:00 já agendado)
+  const durationConflictRes = await makeRequest({
+    path: '/api/agendamentos',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, JSON.stringify({
+    clienteNome: 'Cliente Combo Longo',
+    clienteTelefone: '21999996666',
+    servico: 'Combo Cabelo + Barboterapia',
+    unidade: 'matriz',
+    profissional: 'Joel (Fundador & Barbeiro Titular)',
+    data: dataValida,
+    horario: '13:30' // 13:30 a 14:30 colide com 14:00
+  }));
+  assert.strictEqual(durationConflictRes.status, 409, 'Serviço de 60 min colidindo com slot posterior deve retornar 409');
+  console.log('  ✅ Conflito de duração contínua prevenido com sucesso (HTTP 409)');
+
+  // 8d: API de listagem pública retorna conflito de duração para o cliente
+  const listSlotsRes = await makeRequest({
+    path: `/api/agendamentos?data=${dataValida}&unidade=matriz&duracaoMin=60`,
+    method: 'GET'
+  });
+  assert.strictEqual(listSlotsRes.status, 200);
+  const listSlotsJson = JSON.parse(listSlotsRes.body);
+  assert.ok(listSlotsJson.horariosOcupados.includes('14:00'), '14:00 deve constar em horariosOcupados');
+  assert.ok(listSlotsJson.conflitosDuracao.includes('13:30'), '13:30 deve constar em conflitosDuracao para serviço de 60min');
+  console.log('  ✅ API pública calcula e entrega slots ocupados e conflitos de duração em tempo real');
+
+  // 8e: Concorrência Simultânea Atômica (Dois clientes ao mesmo tempo)
   const concurrentDate = '2099-01-07'; // Quarta-feira
   const concurrentSlot = '11:00';
   const [resA, resB] = await Promise.all([

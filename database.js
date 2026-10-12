@@ -245,13 +245,14 @@ export class DatabaseAdapter {
           const overlap = slotsSolicitados.some(s => itemSlots.includes(s));
           if (!overlap) return false;
 
-          // Se for o mesmo profissional
-          if (item.profissional === agendamento.profissional) return true;
+          // Conflito 1: Mesma unidade (1 cliente por cadeira/horário na unidade)
+          if (item.unidade === agendamento.unidade) return true;
 
-          // Se for na mesma unidade com barbeiro titular
-          if (item.unidade === agendamento.unidade && (item.profissional === agendamento.profissional || agendamento.profissional.includes('Joel'))) {
-            return true;
-          }
+          // Conflito 2: Com o barbeiro titular Joel (não pode estar em dois lugares ao mesmo tempo)
+          if (item.profissional.includes('Joel') || agendamento.profissional.includes('Joel')) return true;
+
+          // Conflito 3: Mesmo profissional
+          if (item.profissional === agendamento.profissional) return true;
 
           return false;
         });
@@ -315,10 +316,14 @@ export class DatabaseAdapter {
           const overlap = slotsSolicitados.some(s => itemSlots.includes(s));
           if (!overlap) return false;
 
+          // Conflito 1: Mesma unidade (1 cliente por cadeira/horário na unidade)
+          if (item.unidade === agendamento.unidade) return true;
+
+          // Conflito 2: Com o barbeiro titular Joel (não pode estar em dois lugares ao mesmo tempo)
+          if (item.profissional.includes('Joel') || agendamento.profissional.includes('Joel')) return true;
+
+          // Conflito 3: Mesmo profissional
           if (item.profissional === agendamento.profissional) return true;
-          if (item.unidade === agendamento.unidade && (item.profissional === agendamento.profissional || agendamento.profissional.includes('Joel'))) {
-            return true;
-          }
 
           return false;
         });
