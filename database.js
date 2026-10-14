@@ -134,9 +134,12 @@ export class DatabaseAdapter {
           INSERT INTO agendamentos (
             id, cliente_nome, cliente_telefone, servico, preco, duracao_min,
             unidade, unidade_titulo, unidade_endereco, profissional,
-            data, horario, observacoes, forma_pagamento, status, criado_em, cancelado_em
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-          ON CONFLICT (id) DO NOTHING;
+            data, horario, observacoes, forma_pagamento, status, criado_em, atualizado_em, cancelado_em
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+          ON CONFLICT (id) DO UPDATE SET
+            status = EXCLUDED.status,
+            atualizado_em = COALESCE(EXCLUDED.atualizado_em, NOW()),
+            cancelado_em = EXCLUDED.cancelado_em;
         `;
         const res = await executor.query(query, [
           item.id,
@@ -155,13 +158,13 @@ export class DatabaseAdapter {
           item.formaPagamento || 'No Local / PIX',
           item.status || 'confirmado',
           item.criadoEm || new Date().toISOString(),
+          item.atualizadoEm || null,
           item.canceladoEm || null
         ]);
         if (res.rowCount > 0) migratedCount++;
       }
-      if (migratedCount > 0) {
-        console.log(`📦 [Database] Migrados ${migratedCount} agendamentos legados do JSON para o PostgreSQL.`);
-      }
+      const countRes = await executor.query('SELECT COUNT(*) AS total FROM agendamentos');
+      console.log(`📦 [Database] Sincronização concluída: ${migratedCount} novos registros processados. Total no PostgreSQL: ${countRes.rows[0].total}`);
     } catch (err) {
       console.error('⚠️ [Database] Erro na migração dos dados legados:', err.message);
     }
