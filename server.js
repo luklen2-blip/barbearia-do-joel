@@ -323,10 +323,19 @@ const server = http.createServer(async (req, res) => {
       status: 'ok',
       app: process.env.APP_NAME || 'Barbearia do Joel',
       version: '2.0.0',
+      commit: process.env.RENDER_GIT_COMMIT || '4e7791e',
       uptime: Math.floor(process.uptime()),
       uptime_seconds: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
-      database: db.isPostgres ? 'postgresql' : 'jsondb'
+      database: db.isPostgres ? 'postgresql' : 'jsondb',
+      storage: {
+        type: db.isPostgres ? 'postgresql' : 'jsondb',
+        persistent: Boolean(db.isPostgres),
+        status: db.isPostgres ? 'conectado' : 'fallback_efemero',
+        alerta: db.isPostgres 
+          ? null 
+          : 'Armazenamento em JsonDB local (efêmero no Render Free). Para persistência permanente, configure DATABASE_URL no Render.'
+      }
     }));
     return;
   }
@@ -877,6 +886,36 @@ _Por favor, confirme o recebimento do meu agendamento!_`;
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: false, error: err.message }));
+    }
+    return;
+  }
+
+  // 9b. Exportação Segura de Backup da Base de Agendamentos (Protegida)
+  if (pathname === '/api/admin/backup' && req.method === 'GET') {
+    if (!isAuthenticatedAdmin(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Acesso não autorizado. Sessão administrativa necessária.' }));
+      return;
+    }
+    try {
+      const agendamentos = await db.getAll();
+      const exportPayload = JSON.stringify({
+        geradoEm: new Date().toISOString(),
+        sistema: 'Barbearia do Joel',
+        versao: '2.0.0',
+        total: agendamentos.length,
+        armazenamento: db.isPostgres ? 'postgresql' : 'jsondb',
+        agendamentos
+      }, null, 2);
+
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Disposition': `attachment; filename="backup-agendamentos-${new Date().toISOString().slice(0, 10)}.json"`
+      });
+      res.end(exportPayload);
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Falha ao gerar backup.' }));
     }
     return;
   }

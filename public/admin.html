@@ -56,6 +56,18 @@
         <button id="btn-refresh" class="btn btn-outline" style="font-size: 0.85rem;">🔄 Atualizar Agenda</button>
       </div>
 
+      <!-- Banner de Status de Armazenamento e Persistência -->
+      <div id="storage-status-banner" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span id="storage-status-indicator" style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #eab308;"></span>
+          <div>
+            <strong id="storage-status-title" style="color: #fff; font-size: 0.95rem;">Armazenamento: Verificando...</strong>
+            <p id="storage-status-desc" style="color: var(--text-muted); font-size: 0.8rem; margin: 2px 0 0 0;">Carregando status da persistência...</p>
+          </div>
+        </div>
+        <button id="btn-export-backup" class="btn btn-outline" style="font-size: 0.8rem; padding: 6px 14px;">📥 Exportar Backup (.json)</button>
+      </div>
+
       <!-- Cards de Métricas -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 30px;">
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 18px; border-radius: var(--radius-sm);">
@@ -221,6 +233,7 @@
       document.getElementById('login-section').style.display = 'none';
       document.getElementById('dashboard-section').style.display = 'block';
       document.getElementById('btn-logout').style.display = 'inline-block';
+      checkStorageStatus();
       loadAgendamentos();
     }
 
@@ -356,6 +369,56 @@
         alert('Erro de conexão ao atualizar status.');
       }
     }
+
+    async function checkStorageStatus() {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        const indicator = document.getElementById('storage-status-indicator');
+        const title = document.getElementById('storage-status-title');
+        const desc = document.getElementById('storage-status-desc');
+
+        if (data.database === 'postgresql') {
+          if (indicator) indicator.style.background = '#10b981';
+          if (title) {
+            title.textContent = 'Banco de Dados: PostgreSQL Conectado';
+            title.style.color = '#34d399';
+          }
+          if (desc) {
+            desc.textContent = 'Persistência permanente em nuvem ativa. Agendamentos blindados contra reinicializações.';
+          }
+        } else {
+          if (indicator) indicator.style.background = '#eab308';
+          if (title) {
+            title.textContent = 'Armazenamento: JsonDB Local (Ambiente Efêmero)';
+            title.style.color = '#fbbf24';
+          }
+          if (desc) {
+            desc.textContent = 'Atenção: No Render gratuito, os agendamentos são voláteis. Configure DATABASE_URL no Render para PostgreSQL permanente.';
+          }
+        }
+      } catch (_) {}
+    }
+
+    document.getElementById('btn-export-backup').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/admin/backup', {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        if (!res.ok) throw new Error('Falha na autenticação ou permissão');
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `backup-agendamentos-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        alert('Erro ao exportar backup: ' + err.message);
+      }
+    });
   </script>
 </body>
 </html>
