@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/run_all.js && node tests/test_seis_fluxos.js",
+    "test": "node tests/run_all.js && node tests/test_seis_fluxos.js && node tests/test_commercial_and_integrity.js",
     "test:fluxos": "node tests/test_seis_fluxos.js",
     "test:live": "node tests/test_cloud_live.js"
   },

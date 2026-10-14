@@ -415,6 +415,10 @@
   <section id="licenca" class="commercial-section">
     <div class="container">
       <div class="commercial-box">
+        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 10px 16px; margin-bottom: 24px; font-size: 0.85rem; color: #93c5fd; text-align: center;">
+          ℹ️ <strong>Atenção Cliente da Barbearia:</strong> Para agendar seu horário, utilize o formulário de agendamento acima. Esta seção é destinada exclusivamente a proprietários e barbeiros que desejam adquirir a licença deste sistema.
+        </div>
+
         <div class="commercial-badge">💼 Oportunidade para Proprietários e Barbeiros</div>
         <h2 class="commercial-title">Tenha este Sistema Completo na sua <span>Barbearia ou Salão</span></h2>
         <p class="commercial-subtitle">
@@ -460,8 +464,11 @@
           <span style="opacity: 0.5;">·</span>
           <span>Entrega Imediata e Acesso Vitalício</span>
           <span style="opacity: 0.5;">·</span>
-          <span>Sem Mensalidades</span>
+          <span>Sem Mensalidades Obrigatórias</span>
         </div>
+        <p style="font-size: 0.78rem; color: #9ca3af; margin-top: 14px; max-width: 680px; margin-left: auto; margin-right: auto; line-height: 1.4;">
+          * Valor oficial e condições de pagamento disponíveis diretamente no checkout seguro da Kiwify. A licença confere direito de uso e customização integral do software. Custos externos com domínio próprio (.com.br) ou eventuais servidores pagos adicionais são de responsabilidade do comprador.
+        </p>
       </div>
     </div>
   </section>
@@ -511,7 +518,7 @@
           <div class="payment-badges-grid">
             <span class="pay-badge pay-badge-pix">⚡ PIX Oficial Bacen</span>
             <span class="pay-badge">💳 Cartão de Crédito (Parcelado)</span>
-            <span class="pay-badge">💳 Débito (Visa, Master, Elo)</span>
+            <span class="pay-badge">💳 Cartão de Débito (Visa, Master, Elo)</span>
             <span class="pay-badge">💵 Dinheiro Físico</span>
             <span class="pay-badge">📱 Apple Pay / Google Pay / NFC</span>
           </div>
@@ -551,8 +558,8 @@
         </p>
         <div class="payment-badges-grid compact">
           <span class="pay-badge pay-badge-pix">⚡ PIX</span>
-          <span class="pay-badge">💳 Crédito (Parcelado)</span>
-          <span class="pay-badge">💳 Débito</span>
+          <span class="pay-badge">💳 Cartão de Crédito</span>
+          <span class="pay-badge">💳 Cartão de Débito</span>
           <span class="pay-badge">💵 Dinheiro</span>
           <span class="pay-badge">📱 Aproximação / NFC</span>
         </div>
@@ -621,6 +628,9 @@
             <p>Acompanhamento na publicação em nuvem 24/7 (Render/Railway/Docker) e entrega de todas as chaves ao proprietário.</p>
           </div>
         </div>
+        <div style="font-size: 0.76rem; color: #9ca3af; margin-top: 6px; line-height: 1.4; border-top: 1px dashed var(--border-color); padding-top: 8px;">
+          * Valor e parcelamento informados com segurança no checkout oficial da Kiwify. A licença concede acesso total aos fontes e painel. Custos externos de domínio próprio (.com.br) ou hospedagens pagas opcionais ficam a cargo do proprietário.
+        </div>
       </div>
 
       <div style="margin-top: 22px; display: flex; flex-direction: column; gap: 10px;">
@@ -667,10 +677,16 @@
           <input type="tel" id="cancel-input-phone" class="form-control" placeholder="(21) 98765-4321" required>
         </div>
 
-        <button type="submit" class="btn btn-outline" style="width: 100%; border-color: #ef4444; color: #f87171; padding: 12px; font-weight: 700;">
-          ✕ Cancelar este Agendamento
-        </button>
+        <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+          <button type="button" id="btn-do-consultar" class="btn btn-outline" style="flex: 1; padding: 12px; font-weight: 700;">
+            🔍 Consultar
+          </button>
+          <button type="submit" id="btn-do-cancelar" class="btn btn-outline" style="flex: 1; border-color: #ef4444; color: #f87171; padding: 12px; font-weight: 700;">
+            ✕ Cancelar
+          </button>
+        </div>
       </form>
+      <div id="booking-query-details" style="display: none; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: left; font-size: 0.85rem; margin-top: 12px;"></div>
       <div id="cancel-msg" style="margin-top: 14px; font-size: 0.85rem; display: none;"></div>
     </div>
   </div>

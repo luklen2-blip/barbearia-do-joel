@@ -600,11 +600,77 @@ function initCancelModal() {
   const form = document.getElementById('cancel-form');
   const msgDiv = document.getElementById('cancel-msg');
 
+  const btnConsultar = document.getElementById('btn-do-consultar');
+  const detailsDiv = document.getElementById('booking-query-details');
+
   if (openBtn && modal) {
     openBtn.addEventListener('click', () => {
       modal.classList.add('active');
       if (msgDiv) msgDiv.style.display = 'none';
+      if (detailsDiv) detailsDiv.style.display = 'none';
       if (form) form.reset();
+    });
+  }
+
+  if (btnConsultar) {
+    btnConsultar.addEventListener('click', async () => {
+      const id = document.getElementById('cancel-input-id').value.trim();
+      const telefone = document.getElementById('cancel-input-phone').value.trim();
+
+      if (!id || !telefone) {
+        if (msgDiv) {
+          msgDiv.style.display = 'block';
+          msgDiv.style.color = '#ef4444';
+          msgDiv.textContent = 'Preencha o protocolo e o telefone para consultar.';
+        }
+        return;
+      }
+
+      btnConsultar.disabled = true;
+      btnConsultar.textContent = 'Buscando...';
+      if (msgDiv) msgDiv.style.display = 'none';
+      if (detailsDiv) detailsDiv.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/agendamentos/consultar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, telefone })
+        });
+        const data = await res.json();
+
+        if (data.success && data.agendamento) {
+          const a = data.agendamento;
+          if (detailsDiv) {
+            detailsDiv.style.display = 'block';
+            detailsDiv.innerHTML = `
+              <div style="font-weight: 700; color: var(--accent-gold); margin-bottom: 6px;">
+                📋 Agendamento #${a.id}
+              </div>
+              <p style="margin: 2px 0;"><strong>Cliente:</strong> ${a.clienteNome}</p>
+              <p style="margin: 2px 0;"><strong>Serviço:</strong> ${a.servico} (R$ ${Number(a.preco).toFixed(2)})</p>
+              <p style="margin: 2px 0;"><strong>Data & Horário:</strong> ${a.data} às ${a.horario}</p>
+              <p style="margin: 2px 0;"><strong>Unidade:</strong> ${a.unidadeTitulo || a.unidade}</p>
+              <p style="margin: 2px 0;"><strong>Status:</strong> <span style="font-weight: 700; color: ${a.status === 'cancelado' ? '#ef4444' : '#10b981'};">${a.status.toUpperCase()}</span></p>
+            `;
+          }
+        } else {
+          if (msgDiv) {
+            msgDiv.style.display = 'block';
+            msgDiv.style.color = '#ef4444';
+            msgDiv.textContent = `✕ ${data.error || 'Agendamento não localizado.'}`;
+          }
+        }
+      } catch (err) {
+        if (msgDiv) {
+          msgDiv.style.display = 'block';
+          msgDiv.style.color = '#ef4444';
+          msgDiv.textContent = 'Erro ao consultar agendamento.';
+        }
+      } finally {
+        btnConsultar.disabled = false;
+        btnConsultar.textContent = '🔍 Consultar';
+      }
     });
   }
 

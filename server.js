@@ -11,8 +11,12 @@ const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 3000;
 
-// Inicializa banco de dados (PostgreSQL com fallback para JsonDB atômico)
-await db.init();
+// Inicializa banco de dados com isolamento e fallback para garantir inicialização ininterrupta
+try {
+  await db.init();
+} catch (err) {
+  console.error('⚠️ [Database] Erro ao inicializar banco de dados:', err.message);
+}
 
 // --- 1. SEGURANÇA E PROTEÇÃO CONTRA FORÇA BRUTA ---
 // Rastreamento de tentativas de login por IP
@@ -659,7 +663,10 @@ _Por favor, confirme o recebimento do meu agendamento!_`;
 
         const limpaTel = telefone.replace(/\D/g, '');
         const targetTel = target.clienteTelefone.replace(/\D/g, '');
-        if (!targetTel.endsWith(limpaTel.slice(-4))) {
+        const matchExact = limpaTel === targetTel;
+        const matchSuffix = limpaTel.length >= 8 && targetTel.endsWith(limpaTel);
+        const matchPrefix = targetTel.length >= 8 && limpaTel.endsWith(targetTel);
+        if (!matchExact && !matchSuffix && !matchPrefix) {
           res.writeHead(403, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: false, error: 'Telefone informado não corresponde ao cadastro deste agendamento.' }));
           return;
@@ -680,8 +687,71 @@ _Por favor, confirme o recebimento do meu agendamento!_`;
           protocolo: target.id
         }));
       } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, error: 'Erro ao processar cancelamento.' }));
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Requisição inválida.' }));
+      }
+    });
+    return;
+  }
+
+  // 6b. Consulta Segura de Agendamento pelo Cliente (com Protocolo e Telefone)
+  if (pathname === '/api/agendamentos/consultar' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', async () => {
+      try {
+        const { id, telefone } = JSON.parse(body || '{}');
+        if (!id || !telefone) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Protocolo e telefone são obrigatórios.' }));
+          return;
+        }
+
+        const target = await db.getById(id);
+        if (!target) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Agendamento não encontrado com o protocolo informado.' }));
+          return;
+        }
+
+        const limpaTel = telefone.replace(/\D/g, '');
+        const targetTel = target.clienteTelefone.replace(/\D/g, '');
+        const matchExact = limpaTel === targetTel;
+        const matchSuffix = limpaTel.length >= 8 && targetTel.endsWith(limpaTel);
+        const matchPrefix = targetTel.length >= 8 && limpaTel.endsWith(targetTel);
+        if (!matchExact && !matchSuffix && !matchPrefix) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Telefone informado não corresponde ao cadastro deste agendamento.' }));
+          return;
+        }
+
+        // Sanitização de privacidade: protege dados sensíveis de outros clientes
+        const partesNome = (target.clienteNome || '').split(' ');
+        const nomeMascarado = partesNome.map((p, idx) => idx === 0 ? p : (p[0] ? p[0] + '***' : '')).join(' ');
+
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          success: true,
+          agendamento: {
+            id: target.id,
+            clienteNome: nomeMascarado,
+            servico: target.servico,
+            preco: target.preco,
+            duracaoMin: target.duracaoMin,
+            unidade: target.unidade,
+            unidadeTitulo: target.unidadeTitulo,
+            unidadeEndereco: target.unidadeEndereco,
+            profissional: target.profissional,
+            data: target.data,
+            horario: target.horario,
+            status: target.status,
+            criadoEm: target.criadoEm,
+            canceladoEm: target.canceladoEm || null
+          }
+        }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Requisição inválida.' }));
       }
     });
     return;

@@ -41,75 +41,93 @@ export class DatabaseAdapter {
     }
 
     if (this.isPostgres) {
-      console.log('🐘 [Database] Conectando ao PostgreSQL via DATABASE_URL / SUPABASE_URL...');
-      const connectionString = this.connectionString;
-      const isLocalhost = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+      try {
+        console.log('🐘 [Database] Conectando ao PostgreSQL via DATABASE_URL / SUPABASE_URL...');
+        const connectionString = this.connectionString;
+        const isLocalhost = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
 
-      this.pool = new pg.Pool({
-        connectionString,
-        ssl: isLocalhost ? false : { rejectUnauthorized: false }
-      });
+        this.pool = new pg.Pool({
+          connectionString,
+          ssl: isLocalhost ? false : { rejectUnauthorized: false },
+          connectionTimeoutMillis: 5000,
+          idleTimeoutMillis: 30000,
+          max: 10
+        });
 
-      // Criação das tabelas essenciais (agendamentos, bloqueios, tokens)
-      const createTableSql = `
-        CREATE TABLE IF NOT EXISTS agendamentos (
-          id VARCHAR(30) PRIMARY KEY,
-          cliente_nome VARCHAR(150) NOT NULL,
-          cliente_telefone VARCHAR(30) NOT NULL,
-          servico VARCHAR(100) NOT NULL,
-          preco NUMERIC(10,2) NOT NULL,
-          duracao_min INT NOT NULL DEFAULT 30,
-          unidade VARCHAR(50) NOT NULL,
-          unidade_titulo VARCHAR(100),
-          unidade_endereco VARCHAR(200),
-          profissional VARCHAR(100) NOT NULL,
-          data VARCHAR(20) NOT NULL,
-          horario VARCHAR(10) NOT NULL,
-          observacoes TEXT,
-          forma_pagamento VARCHAR(50) DEFAULT 'No Local / PIX',
-          status VARCHAR(30) NOT NULL DEFAULT 'confirmado',
-          criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          atualizado_em TIMESTAMPTZ,
-          cancelado_em TIMESTAMPTZ
-        );
-        CREATE INDEX IF NOT EXISTS idx_agendamentos_data_horario ON agendamentos (data, horario);
-        CREATE INDEX IF NOT EXISTS idx_agendamentos_status ON agendamentos (status);
+        // Criação das tabelas essenciais (agendamentos, bloqueios, tokens)
+        const createTableSql = `
+          CREATE TABLE IF NOT EXISTS agendamentos (
+            id VARCHAR(30) PRIMARY KEY,
+            cliente_nome VARCHAR(150) NOT NULL,
+            cliente_telefone VARCHAR(30) NOT NULL,
+            servico VARCHAR(100) NOT NULL,
+            preco NUMERIC(10,2) NOT NULL,
+            duracao_min INT NOT NULL DEFAULT 30,
+            unidade VARCHAR(50) NOT NULL,
+            unidade_titulo VARCHAR(100),
+            unidade_endereco VARCHAR(200),
+            profissional VARCHAR(100) NOT NULL,
+            data VARCHAR(20) NOT NULL,
+            horario VARCHAR(10) NOT NULL,
+            observacoes TEXT,
+            forma_pagamento VARCHAR(50) DEFAULT 'No Local / PIX',
+            status VARCHAR(30) NOT NULL DEFAULT 'confirmado',
+            criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            atualizado_em TIMESTAMPTZ,
+            cancelado_em TIMESTAMPTZ
+          );
+          CREATE INDEX IF NOT EXISTS idx_agendamentos_data_horario ON agendamentos (data, horario);
+          CREATE INDEX IF NOT EXISTS idx_agendamentos_status ON agendamentos (status);
 
-        CREATE TABLE IF NOT EXISTS bloqueios (
-          id VARCHAR(50) PRIMARY KEY,
-          data VARCHAR(20) NOT NULL,
-          horario VARCHAR(10),
-          unidade VARCHAR(50),
-          motivo VARCHAR(200),
-          criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        );
-        CREATE INDEX IF NOT EXISTS idx_bloqueios_data ON bloqueios (data);
+          CREATE TABLE IF NOT EXISTS bloqueios (
+            id VARCHAR(50) PRIMARY KEY,
+            data VARCHAR(20) NOT NULL,
+            horario VARCHAR(10),
+            unidade VARCHAR(50),
+            motivo VARCHAR(200),
+            criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          CREATE INDEX IF NOT EXISTS idx_bloqueios_data ON bloqueios (data);
 
-        CREATE TABLE IF NOT EXISTS tokens (
-          token VARCHAR(128) PRIMARY KEY,
-          ip VARCHAR(50),
-          criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          expira_em TIMESTAMPTZ NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_tokens_expira ON tokens (expira_em);
-      `;
-      await this.pool.query(createTableSql);
+          CREATE TABLE IF NOT EXISTS tokens (
+            token VARCHAR(128) PRIMARY KEY,
+            ip VARCHAR(50),
+            criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            expira_em TIMESTAMPTZ NOT NULL
+          );
+          CREATE INDEX IF NOT EXISTS idx_tokens_expira ON tokens (expira_em);
+        `;
 
-      // Migração automática e idempotente dos dados existentes no JsonDB
-      await this._migrateFromJson();
-      console.log('✅ [Database] PostgreSQL inicializado e sincronizado com sucesso.');
+        const client = await this.pool.connect();
+        try {
+          await client.query(createTableSql);
+          await this._migrateFromJson(client);
+          console.log('✅ [Database] PostgreSQL inicializado e sincronizado com sucesso.');
+        } finally {
+          client.release();
+        }
+      } catch (err) {
+        console.error('⚠️ [Database] Falha ao conectar ao PostgreSQL:', err.message);
+        console.warn('📁 [Database] Ativando fallback automático para JsonDB atômico para garantir disponibilidade.');
+        this.isPostgres = false;
+        if (this.pool) {
+          try { await this.pool.end(); } catch {}
+          this.pool = null;
+        }
+      }
     } else {
       console.log('📁 [Database] Operando em modo JsonDB atômico resiliente (Fallback local/dev).');
     }
   }
 
-  async _migrateFromJson() {
+  async _migrateFromJson(client) {
     try {
       if (!fs.existsSync(AGENDAMENTOS_FILE)) return;
       const raw = fs.readFileSync(AGENDAMENTOS_FILE, 'utf-8');
       const items = JSON.parse(raw || '[]');
       if (items.length === 0) return;
 
+      const executor = client || this.pool;
       let migratedCount = 0;
       for (const item of items) {
         const query = `
@@ -120,7 +138,7 @@ export class DatabaseAdapter {
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
           ON CONFLICT (id) DO NOTHING;
         `;
-        const res = await this.pool.query(query, [
+        const res = await executor.query(query, [
           item.id,
           item.clienteNome,
           item.clienteTelefone,
