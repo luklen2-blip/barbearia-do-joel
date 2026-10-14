@@ -55,7 +55,51 @@ node tests/test_cloud_live.js https://sua-url-na-nuvem.onrender.com
 
 ---
 
+## 🗄️ Persistência Híbrida Resiliente (Render Free / Supabase / Local)
+
+O sistema conta com um adaptador de banco de dados híbrido (`database.js`):
+- **Ambiente de Produção em Nuvem:** Se a variável `DATABASE_URL` ou `SUPABASE_URL` estiver configurada, conecta-se a um pool PostgreSQL com criação e migração automática das tabelas (`agendamentos`, `bloqueios`, `tokens`).
+- **Ambiente Local / Fallback Gracioso:** Se nenhuma variável de banco estiver definida, opera em modo `JsonDB` atômico transacional em `data/agendamentos.json`, garantindo que os testes rodem 100% offline e sem dependências externas.
+
+---
+
+## ⏱️ Prevenção de Cold Start (Keep-Alive 24/7)
+
+Para evitar que a instância gratuita do Render entre em suspensão após 15 minutos de inatividade:
+
+### Opção A: Monitor Gratuito UptimeRobot (Recomendado - 2 minutos)
+1. Acesse [UptimeRobot.com](https://uptimerobot.com) e crie uma conta gratuita.
+2. Clique em **Add New Monitor**.
+3. Selecione o tipo **HTTP(s)**.
+4. Preencha os campos:
+   - **Friendly Name:** `Barbearia do Joel - Health Check`
+   - **URL (or IP):** `https://barbearia-do-joel.onrender.com/api/health`
+   - **Monitoring Interval:** `5 minutes` ou `10 minutes`
+5. Clique em **Create Monitor**. O Render permanecerá ativo 24/7 com resposta instantânea.
+
+### Opção B: Cron-Job.org (Alternativa 100% Gratuita)
+1. Acesse [cron-job.org](https://cron-job.org) e faça login.
+2. Clique em **Create Cronjob**.
+3. Configure a URL: `https://barbearia-do-joel.onrender.com/api/health`
+4. Defina a periodicidade para cada **10 minutos** e salve.
+
+### Opção C: Self-Ping Interno no Render
+Defina as seguintes variáveis de ambiente no dashboard do Render:
+```env
+ENABLE_SELF_PING=true
+SELF_PING_URL=https://barbearia-do-joel.onrender.com/api/health
+PING_INTERVAL_MINUTES=10
+```
+
+### Script Utilitário de Verificação:
+```bash
+node scripts/ping-health.js
+```
+
+---
+
 ## 📍 Localizações Físicas
 - **Matriz:** Rua Francisco Mota, 93 - Campo Grande, Rio de Janeiro - RJ (CEP 23013-630)
 - **Filial:** Rua Alfredo Mariano, 24 - Campo Grande, Rio de Janeiro - RJ
-- **WhatsApp:** (21) 98215-6025
+- **WhatsApp Oficial:** (21) 98215-6025
+

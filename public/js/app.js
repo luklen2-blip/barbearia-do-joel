@@ -448,8 +448,26 @@ function initBookingForm() {
 // 4. Modal de Confirmação & PIX
 let currentWhatsappUrl = '';
 
+function formatCanonicalWhatsappUrl(agendamento) {
+  const msg = 
+`💈 *AGENDAMENTO CONFIRMADO - BARBEARIA DO JOEL* 💈
+📌 *Protocolo:* #${agendamento.id}
+👤 *Cliente:* ${agendamento.clienteNome}
+📞 *WhatsApp:* ${agendamento.clienteTelefone}
+✂️ *Serviço:* ${agendamento.servico}
+📅 *Data:* ${agendamento.data}
+⏰ *Horário:* ${agendamento.horario}
+💰 *Valor Confirmado:* R$ ${Number(agendamento.preco).toFixed(2)}
+📍 *Endereço:* ${agendamento.unidadeTitulo || 'Unidade Matriz'} (${agendamento.unidadeEndereco || 'Rua Francisco Mota, 93'})
+💈 *Profissional:* ${agendamento.profissional}
+
+_Por favor, confirme o recebimento do meu agendamento!_`;
+
+  return `https://wa.me/5521982156025?text=${encodeURIComponent(msg)}`;
+}
+
 function openConfirmationModal(agendamento, whatsappUrl) {
-  currentWhatsappUrl = whatsappUrl;
+  currentWhatsappUrl = whatsappUrl || formatCanonicalWhatsappUrl(agendamento);
   const modal = document.getElementById('pix-modal');
   const modalDetails = document.getElementById('modal-booking-details');
   const btnZap = document.getElementById('modal-btn-whatsapp');
@@ -467,7 +485,9 @@ function openConfirmationModal(agendamento, whatsappUrl) {
   }
 
   if (btnZap) {
-    btnZap.href = whatsappUrl;
+    btnZap.href = currentWhatsappUrl;
+    btnZap.setAttribute('target', '_blank');
+    btnZap.setAttribute('rel', 'noopener noreferrer');
   }
 
   // Gera dados do PIX de Sinal (R$ 15,00)

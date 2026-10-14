@@ -56,6 +56,18 @@ async function runSixFlowTests() {
   // Inicializa servidor para testes de API
   process.env.PORT = String(testPort);
   process.env.ADMIN_PASSWORD = 'teste_admin_pass_seis_fluxos_123';
+
+  // Limpa agendamentos de teste prévios (datas 2099) para garantir idempotência dos testes
+  const dbPath = path.join(ROOT_DIR, 'data', 'agendamentos.json');
+  if (fs.existsSync(dbPath)) {
+    try {
+      const dbRaw = fs.readFileSync(dbPath, 'utf-8');
+      const dbData = JSON.parse(dbRaw || '[]');
+      const sanitizedData = dbData.filter(a => !a.data?.startsWith('2099-'));
+      fs.writeFileSync(dbPath, JSON.stringify(sanitizedData, null, 2), 'utf-8');
+    } catch {}
+  }
+
   const { db } = await import(`../database.js?t=${Date.now()}`);
   await db.init();
 
@@ -335,6 +347,28 @@ async function runSixFlowTests() {
     assert.strictEqual(validBookingJson.success, true);
     assert.ok(validBookingJson.agendamento.id.startsWith('JOEL-'), 'Protocolo oficial no formato JOEL-XXXX');
     const createdProtocolId = validBookingJson.agendamento.id;
+
+    // Validação da Mensagem Canônica e Rica do WhatsApp
+    assert.ok(validBookingJson.whatsappUrl.startsWith('https://wa.me/5521982156025?text='), 'URL canônica wa.me oficial com DDD e código internacional');
+    const decodedWaText = decodeURIComponent(validBookingJson.whatsappUrl.split('?text=')[1]);
+    assert.ok(decodedWaText.includes(`*Protocolo:* #${createdProtocolId}`), 'WhatsApp deve conter o protocolo');
+    assert.ok(decodedWaText.includes('*Cliente:* Cliente Teste Auditoria'), 'WhatsApp deve conter o nome do cliente');
+    assert.ok(decodedWaText.includes('*Serviço:* Combo Cabelo + Barba Completa'), 'WhatsApp deve conter o serviço selecionado');
+    assert.ok(decodedWaText.includes('*Data:* 2099-10-27'), 'WhatsApp deve conter a data');
+    assert.ok(decodedWaText.includes('*Horário:* 11:00'), 'WhatsApp deve conter o horário');
+    assert.ok(decodedWaText.includes('*Valor Confirmado:* R$ 55.00'), 'WhatsApp deve conter o valor');
+    assert.ok(decodedWaText.includes('*Endereço:* Unidade Matriz'), 'WhatsApp deve conter o endereço');
+
+    // Validação da Camada de Abstração de Persistência Híbrida (Aliases canônicos)
+    const dbFoundById = await db.findById(createdProtocolId);
+    assert.ok(dbFoundById, 'db.findById() deve localizar o agendamento');
+    assert.strictEqual(dbFoundById.id, createdProtocolId);
+
+    const dbFindAll = await db.findAll({ data: '2099-10-27' });
+    assert.ok(Array.isArray(dbFindAll) && dbFindAll.length > 0, 'db.findAll() deve retornar array de agendamentos');
+
+    const dbUpdated = await db.update(createdProtocolId, 'confirmado');
+    assert.ok(dbUpdated, 'db.update() deve atualizar o status com sucesso');
 
     // 6f. Prevenção de conflito de horário concorrente (Zero Double-Booking)
     const conflictBookingRes = await makeRequest({

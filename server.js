@@ -1,4 +1,5 @@
 import http from 'http';
+import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -311,13 +312,14 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = parsedUrl.pathname;
 
-  // 1. Health Check Obrigatório Padrão Luciano 24/7
+  // 1. Health Check Obrigatório Padrão Luciano 24/7 (Ultra-leve)
   if (pathname === '/api/health' && req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({
       status: 'ok',
       app: process.env.APP_NAME || 'Barbearia do Joel',
       version: '2.0.0',
+      uptime: Math.floor(process.uptime()),
       uptime_seconds: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
       database: db.isPostgres ? 'postgresql' : 'jsondb'
@@ -533,22 +535,32 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        const servicoObj = BARBEARIA_INFO.servicos.find(s => {
-          if (ag.servicoId && s.id === ag.servicoId) return true;
-          if (servicoNome && s.nome.toLowerCase() === servicoNome.toLowerCase()) return true;
-          if (servicoNome && s.id.toLowerCase() === servicoNome.toLowerCase()) return true;
-          if (servicoNome) {
-            const sLower = servicoNome.toLowerCase();
-            if (s.id === 'combo-completo' && sLower.includes('combo')) return true;
-            if (s.id === 'barba-terapia' && sLower.includes('barba')) return true;
-            if (s.id === 'corte-social' && (sLower.includes('social') || sLower.includes('tradicional'))) return true;
-            if (s.id === 'corte-degrade' && (sLower.includes('degradê') || sLower.includes('degrade') || sLower.includes('fade'))) return true;
-            if (s.id === 'corte-infantil' && (sLower.includes('infantil') || sLower.includes('kids'))) return true;
-            if (s.id === 'sobrancelha' && sLower.includes('sobrancelha')) return true;
-            if (s.id === 'pigmentacao' && (sLower.includes('pigmentação') || sLower.includes('pigmentacao') || sLower.includes('camuflagem'))) return true;
+        // 1. Busca exata prioritária por servicoId ou nome oficial
+        let servicoObj = BARBEARIA_INFO.servicos.find(s => 
+          (ag.servicoId && s.id === ag.servicoId) ||
+          (servicoNome && s.nome.toLowerCase() === servicoNome.toLowerCase()) ||
+          (servicoNome && s.id.toLowerCase() === servicoNome.toLowerCase())
+        );
+
+        // 2. Fallback semântico desambiguado para nomes legados ou parciais
+        if (!servicoObj && servicoNome) {
+          const sLower = servicoNome.toLowerCase();
+          if (sLower.includes('combo')) {
+            servicoObj = BARBEARIA_INFO.servicos.find(s => s.id === 'combo-completo');
+          } else if (sLower.includes('barba') || sLower.includes('barboterapia')) {
+            servicoObj = BARBEARIA_INFO.servicos.find(s => s.id === 'barba-terapia');
+          } else if (sLower.includes('degradê') || sLower.includes('degrade') || sLower.includes('fade')) {
+            servicoObj = BARBEARIA_INFO.servicos.find(s => s.id === 'corte-degrade');
+          } else if (sLower.includes('infantil') || sLower.includes('kids')) {
+            servicoObj = BARBEARIA_INFO.servicos.find(s => s.id === 'corte-infantil');
+          } else if (sLower.includes('sobrancelha')) {
+            servicoObj = BARBEARIA_INFO.servicos.find(s => s.id === 'sobrancelha');
+          } else if (sLower.includes('pigmentação') || sLower.includes('pigmentacao') || sLower.includes('camuflagem')) {
+            servicoObj = BARBEARIA_INFO.servicos.find(s => s.id === 'pigmentacao');
+          } else if (sLower.includes('social') || sLower.includes('tradicional') || sLower.includes('corte')) {
+            servicoObj = BARBEARIA_INFO.servicos.find(s => s.id === 'corte-social');
           }
-          return false;
-        });
+        }
 
         if (!servicoObj) {
           res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -595,18 +607,18 @@ const server = http.createServer(async (req, res) => {
         }
 
         const whatsAppText = 
-`💈 *NOVO AGENDAMENTO - BARBEARIA DO JOEL* 💈
+`💈 *AGENDAMENTO CONFIRMADO - BARBEARIA DO JOEL* 💈
 📌 *Protocolo:* #${novoAgendamento.id}
 👤 *Cliente:* ${novoAgendamento.clienteNome}
-📞 *Telefone:* ${novoAgendamento.clienteTelefone}
+📞 *WhatsApp:* ${novoAgendamento.clienteTelefone}
 ✂️ *Serviço:* ${novoAgendamento.servico}
-💰 *Valor:* R$ ${Number(novoAgendamento.preco).toFixed(2)}
-🏢 *Unidade:* ${novoAgendamento.unidadeTitulo} (${novoAgendamento.unidadeEndereco})
-💈 *Profissional:* ${novoAgendamento.profissional}
 📅 *Data:* ${novoAgendamento.data}
 ⏰ *Horário:* ${novoAgendamento.horario}
+💰 *Valor Confirmado:* R$ ${Number(novoAgendamento.preco).toFixed(2)}
+📍 *Endereço:* ${novoAgendamento.unidadeTitulo} (${novoAgendamento.unidadeEndereco})
+💈 *Profissional:* ${novoAgendamento.profissional}
 
-_Agendamento registrado no site oficial!_`;
+_Por favor, confirme o recebimento do meu agendamento!_`;
 
         const whatsappUrl = `https://wa.me/${BARBEARIA_INFO.whatsapp}?text=${encodeURIComponent(whatsAppText)}`;
 
@@ -895,4 +907,38 @@ _Agendamento registrado no site oficial!_`;
 server.listen(PORT, () => {
   console.log(`💈 Barbearia do Joel - Servidor rodando na porta ${PORT}`);
   console.log(`📡 Health Check disponível em: http://localhost:${PORT}/api/health`);
+  initSelfPing();
 });
+
+// --- 11. MECANISMO DE PREVENÇÃO DE COLD START (KEEP-ALIVE) ---
+function initSelfPing() {
+  if (process.env.ENABLE_SELF_PING !== 'true') return;
+
+  const targetUrl = process.env.SELF_PING_URL || 'https://barbearia-do-joel.onrender.com/api/health';
+  const intervalMinutes = Math.max(1, parseInt(process.env.PING_INTERVAL_MINUTES || '10', 10));
+  const intervalMs = intervalMinutes * 60 * 1000;
+
+  console.log(`⏱️ [Keep-Alive] Self-ping ativo a cada ${intervalMinutes} min para ${targetUrl}`);
+
+  const pingTimer = setInterval(() => {
+    try {
+      const client = targetUrl.startsWith('https') ? https : http;
+      client.get(targetUrl, (res) => {
+        res.on('data', () => {});
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            console.log(`💓 [Keep-Alive] Ping executado com sucesso (${new Date().toISOString()})`);
+          } else {
+            console.warn(`⚠️ [Keep-Alive] Ping retornou status HTTP ${res.statusCode}`);
+          }
+        });
+      }).on('error', (err) => {
+        console.error(`⚠️ [Keep-Alive] Erro na requisição do ping:`, err.message);
+      });
+    } catch (err) {
+      console.error(`⚠️ [Keep-Alive] Falha ao disparar self-ping:`, err.message);
+    }
+  }, intervalMs);
+
+  if (pingTimer.unref) pingTimer.unref();
+}

@@ -23,7 +23,8 @@ class AsyncMutex {
 
 export class DatabaseAdapter {
   constructor() {
-    this.isPostgres = Boolean(process.env.DATABASE_URL);
+    this.connectionString = process.env.DATABASE_URL || process.env.SUPABASE_URL || null;
+    this.isPostgres = Boolean(this.connectionString);
     this.pool = null;
     this.mutex = new AsyncMutex();
   }
@@ -40,8 +41,8 @@ export class DatabaseAdapter {
     }
 
     if (this.isPostgres) {
-      console.log('🐘 [Database] Conectando ao PostgreSQL via DATABASE_URL...');
-      const connectionString = process.env.DATABASE_URL;
+      console.log('🐘 [Database] Conectando ao PostgreSQL via DATABASE_URL / SUPABASE_URL...');
+      const connectionString = this.connectionString;
       const isLocalhost = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
 
       this.pool = new pg.Pool({
@@ -49,7 +50,7 @@ export class DatabaseAdapter {
         ssl: isLocalhost ? false : { rejectUnauthorized: false }
       });
 
-      // Criação das tabelas
+      // Criação das tabelas essenciais (agendamentos, bloqueios, tokens)
       const createTableSql = `
         CREATE TABLE IF NOT EXISTS agendamentos (
           id VARCHAR(30) PRIMARY KEY,
@@ -73,6 +74,24 @@ export class DatabaseAdapter {
         );
         CREATE INDEX IF NOT EXISTS idx_agendamentos_data_horario ON agendamentos (data, horario);
         CREATE INDEX IF NOT EXISTS idx_agendamentos_status ON agendamentos (status);
+
+        CREATE TABLE IF NOT EXISTS bloqueios (
+          id VARCHAR(50) PRIMARY KEY,
+          data VARCHAR(20) NOT NULL,
+          horario VARCHAR(10),
+          unidade VARCHAR(50),
+          motivo VARCHAR(200),
+          criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_bloqueios_data ON bloqueios (data);
+
+        CREATE TABLE IF NOT EXISTS tokens (
+          token VARCHAR(128) PRIMARY KEY,
+          ip VARCHAR(50),
+          criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          expira_em TIMESTAMPTZ NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_tokens_expira ON tokens (expira_em);
       `;
       await this.pool.query(createTableSql);
 
@@ -387,6 +406,58 @@ export class DatabaseAdapter {
         }
         return false;
       });
+    }
+  }
+
+  // Aliases canônicos padronizados
+  async findAll(filtros = {}) {
+    return this.getAll(filtros);
+  }
+
+  async findById(id) {
+    return this.getById(id);
+  }
+
+  async update(id, newStatus, extra = {}) {
+    return this.updateStatus(id, newStatus, extra);
+  }
+
+  // Gerenciamento persistente de tokens administrativos
+  async saveToken(token, ip, expiraEm) {
+    if (this.isPostgres) {
+      try {
+        await this.pool.query(
+          'INSERT INTO tokens (token, ip, expira_em) VALUES ($1, $2, $3) ON CONFLICT (token) DO UPDATE SET expira_em = $3',
+          [token, ip, new Date(expiraEm)]
+        );
+      } catch (err) {
+        console.error('⚠️ [Database] Erro ao salvar token:', err.message);
+      }
+    }
+  }
+
+  async isTokenValid(token) {
+    if (this.isPostgres) {
+      try {
+        const res = await this.pool.query(
+          'SELECT token FROM tokens WHERE token = $1 AND expira_em > NOW() LIMIT 1',
+          [token]
+        );
+        return res.rows.length > 0;
+      } catch {
+        return false;
+      }
+    }
+    return true; // No modo JsonDB local, gerenciado em memória
+  }
+
+  async revokeToken(token) {
+    if (this.isPostgres) {
+      try {
+        await this.pool.query('DELETE FROM tokens WHERE token = $1', [token]);
+      } catch (err) {
+        console.error('⚠️ [Database] Erro ao revogar token:', err.message);
+      }
     }
   }
 }
