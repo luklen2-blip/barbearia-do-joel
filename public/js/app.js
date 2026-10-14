@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initPixModal();
   initFacadeLightbox();
   initCancelModal();
+  initCommercialModal();
 });
 
 // Identificador Oficial de Feriados Nacionais e do Rio de Janeiro
@@ -668,3 +669,39 @@ function initCancelModal() {
     });
   }
 }
+
+// 8. Modal Comercial da Licença Definitiva (Kiwify)
+function initCommercialModal() {
+  const modal = document.getElementById('commercial-modal');
+  const closeBtn = document.getElementById('commercial-modal-close');
+  const detailsBtn = document.getElementById('btn-open-commercial-details');
+  const triggers = document.querySelectorAll('[data-open-commercial-modal]');
+
+  const openModal = (e) => {
+    if (e) e.preventDefault();
+    if (modal) modal.classList.add('active');
+  };
+
+  const closeModal = () => {
+    if (modal) modal.classList.remove('active');
+  };
+
+  if (detailsBtn) {
+    detailsBtn.addEventListener('click', openModal);
+  }
+
+  triggers.forEach(trigger => {
+    trigger.addEventListener('click', openModal);
+  });
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeModal);
+  }
+
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+}
+

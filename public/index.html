@@ -32,6 +32,7 @@
           <li><a href="#agendamento">Agendar</a></li>
           <li><a href="#locais">Unidades</a></li>
           <li><a href="#avaliacoes">Avaliações</a></li>
+          <li><a href="#licenca" data-open-commercial-modal style="color: var(--accent-gold); font-weight: 600;">💼 Licença</a></li>
         </ul>
       </nav>
 
@@ -410,6 +411,61 @@
     </div>
   </section>
 
+  <!-- Seção Comercial: Licença Definitiva e Aquisição da Plataforma -->
+  <section id="licenca" class="commercial-section">
+    <div class="container">
+      <div class="commercial-box">
+        <div class="commercial-badge">💼 Oportunidade para Proprietários e Barbeiros</div>
+        <h2 class="commercial-title">Tenha este Sistema Completo na sua <span>Barbearia ou Salão</span></h2>
+        <p class="commercial-subtitle">
+          Adquira a licença comercial definitiva e vitalícia da plataforma. Uma solução moderna, sem taxas por agendamento e pronta para elevar o faturamento e a organização do seu negócio.
+        </p>
+
+        <div class="benefits-grid">
+          <div class="benefit-card">
+            <div class="benefit-icon">👑</div>
+            <h4>Posse Total & Vitalícia</h4>
+            <p>Acesso total e irrestrito ao código-fonte completo em Node.js e ao painel administrativo do site.</p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">🚫</div>
+            <h4>Zero Mensalidades</h4>
+            <p>Sem cobrança de mensalidades obrigatórias de sistema. A plataforma é 100% sua para sempre.</p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">🎨</div>
+            <h4>Personalização Completa</h4>
+            <p>Personalização integral com a marca, catálogo de serviços, contatos e fotos da sua barbearia.</p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">🚀</div>
+            <h4>Suporte Inicial & Deploy</h4>
+            <p>Suporte inicial para implantação em nuvem 24/7 e entrega da posse total com credenciais ao proprietário.</p>
+          </div>
+        </div>
+
+        <div class="commercial-cta-wrapper">
+          <a href="https://kiwify.app/oYFh6Tz" target="_blank" rel="noopener noreferrer" class="btn btn-kiwify">
+            <span>⚡ Adquirir Licença Definitiva via Kiwify</span>
+          </a>
+          <button type="button" class="btn btn-outline" id="btn-open-commercial-details" style="font-size: 0.9rem;">
+            <span>ℹ️ Ver Detalhes da Licença</span>
+          </button>
+        </div>
+        <div class="commercial-guarantee">
+          <span>🔒 Checkout Seguro Kiwify</span>
+          <span style="opacity: 0.5;">·</span>
+          <span>Entrega Imediata e Acesso Vitalício</span>
+          <span style="opacity: 0.5;">·</span>
+          <span>Sem Mensalidades</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Footer Oficial -->
   <footer class="footer">
     <div class="container">
@@ -443,13 +499,22 @@
             <li><a href="https://instagram.com/barbearia.do.joel" target="_blank" rel="noopener">Instagram Oficial</a></li>
             <li><a href="https://wa.me/5521982156025" target="_blank" rel="noopener">Suporte WhatsApp</a></li>
             <li><a href="/admin" style="color: var(--accent-gold); font-weight: 600;">🔒 Área do Barbeiro</a></li>
+            <li><a href="#licenca" data-open-commercial-modal style="color: var(--accent-gold); font-weight: 600;">💼 Adquirir este Sistema (Kiwify)</a></li>
           </ul>
         </div>
 
         <div class="footer-col">
-          <h4>Pagamentos</h4>
-          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">Aceitamos PIX instantâneo oficial, cartões de crédito, débito e dinheiro.</p>
-          <span class="btn btn-pix" style="font-size: 0.75rem; padding: 4px 10px; cursor: default;">⚡ PIX Disponível</span>
+          <h4>Formas de Pagamento</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+            Aceitamos todas as principais modalidades no atendimento presencial ou sinal via PIX:
+          </p>
+          <div class="payment-badges-grid">
+            <span class="pay-badge pay-badge-pix">⚡ PIX Oficial Bacen</span>
+            <span class="pay-badge">💳 Cartão de Crédito (Parcelado)</span>
+            <span class="pay-badge">💳 Débito (Visa, Master, Elo)</span>
+            <span class="pay-badge">💵 Dinheiro Físico</span>
+            <span class="pay-badge">📱 Apple Pay / Google Pay / NFC</span>
+          </div>
         </div>
       </div>
 
@@ -476,6 +541,23 @@
 
       <div id="modal-booking-details" style="background: var(--bg-secondary); padding: 14px; border-radius: 8px; text-align: left; font-size: 0.85rem; margin-bottom: 16px;"></div>
 
+      <!-- Formas de Pagamento Aceitas no Atendimento -->
+      <div class="accepted-payments-box" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 16px; text-align: left;">
+        <h5 style="color: #fff; font-size: 0.88rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+          💳 Formas de Pagamento Aceitas na Barbearia:
+        </h5>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">
+          Você pode pagar no balcão no momento do corte ou adiantar o sinal via PIX abaixo:
+        </p>
+        <div class="payment-badges-grid compact">
+          <span class="pay-badge pay-badge-pix">⚡ PIX</span>
+          <span class="pay-badge">💳 Crédito (Parcelado)</span>
+          <span class="pay-badge">💳 Débito</span>
+          <span class="pay-badge">💵 Dinheiro</span>
+          <span class="pay-badge">📱 Aproximação / NFC</span>
+        </div>
+      </div>
+
       <div style="border-top: 1px dashed var(--border-color); padding-top: 14px; margin-top: 14px;">
         <h4 style="color: #fff; font-size: 0.95rem; margin-bottom: 6px;">Pagamento Opcional de Sinal (PIX)</h4>
         <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
@@ -495,6 +577,58 @@
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <a id="modal-btn-whatsapp" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" style="width: 100%;">
           💬 Enviar Comprovante no WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Comercial: Adquirir este Sistema / Licença Definitiva -->
+  <div id="commercial-modal" class="modal-overlay">
+    <div class="modal-content commercial-modal-content">
+      <button id="commercial-modal-close" class="modal-close">&times;</button>
+      <div style="font-size: 2.6rem; margin-bottom: 8px;">💼</div>
+      <h3 style="color: var(--accent-gold); margin-bottom: 6px;">Licença Comercial Definitiva</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 18px;">
+        Tenha a plataforma de agendamento mais robusta do mercado para a sua barbearia ou salão.
+      </p>
+
+      <div class="commercial-modal-features">
+        <div class="feature-row">
+          <span class="feature-icon">👑</span>
+          <div>
+            <strong>Acesso Total & Vitalício ao Código</strong>
+            <p>Posse integral dos arquivos-fonte (Node.js, PostgreSQL/JsonDB, CSS e JS) e do Painel Administrativo do Barbeiro.</p>
+          </div>
+        </div>
+        <div class="feature-row">
+          <span class="feature-icon">🚫</span>
+          <div>
+            <strong>Zero Mensalidades Obrigatórias</strong>
+            <p>Economize milhares de reais por ano. Não cobramos mensalidades, nem taxas por agendamento ou comissões.</p>
+          </div>
+        </div>
+        <div class="feature-row">
+          <span class="feature-icon">🎨</span>
+          <div>
+            <strong>Personalização com a Sua Marca</strong>
+            <p>Configuração completa com as suas cores, logotipo, tabela de serviços, preços, profissionais e endereços.</p>
+          </div>
+        </div>
+        <div class="feature-row">
+          <span class="feature-icon">🚀</span>
+          <div>
+            <strong>Suporte Inicial & Entrega da Posse</strong>
+            <p>Acompanhamento na publicação em nuvem 24/7 (Render/Railway/Docker) e entrega de todas as chaves ao proprietário.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 22px; display: flex; flex-direction: column; gap: 10px;">
+        <a href="https://kiwify.app/oYFh6Tz" target="_blank" rel="noopener noreferrer" class="btn btn-kiwify" style="width: 100%; text-align: center; text-decoration: none; font-size: 1rem; padding: 14px;">
+          ⚡ Adquirir Agora na Kiwify com Garantia
+        </a>
+        <a href="https://wa.me/5521982156025?text=Ol%C3%A1!%20Gostaria%20de%20tirar%20d%C3%BAvidas%20sobre%20a%20licen%C3%A7a%20definitiva%20do%20sistema%20da%20Barbearia." target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="width: 100%; text-align: center; text-decoration: none; font-size: 0.85rem;">
+          💬 Tirar Dúvidas com o Desenvolvedor no WhatsApp
         </a>
       </div>
     </div>
