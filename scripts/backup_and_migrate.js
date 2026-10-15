@@ -121,10 +121,7 @@ async function runBackupAndMigrate() {
           unidade, unidade_titulo, unidade_endereco, profissional,
           data, horario, observacoes, forma_pagamento, status, criado_em, atualizado_em, cancelado_em
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-        ON CONFLICT (id) DO UPDATE SET
-          status = EXCLUDED.status,
-          atualizado_em = COALESCE(EXCLUDED.atualizado_em, NOW()),
-          cancelado_em = EXCLUDED.cancelado_em;
+        ON CONFLICT (id) DO NOTHING;
       `;
       await client.query(query, [
         item.id,

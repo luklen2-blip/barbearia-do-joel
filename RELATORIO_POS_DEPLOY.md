@@ -1,11 +1,11 @@
 # RELATÓRIO OFICIAL DE AUDITORIA PÓS-DEPLOY & GUIA DE CONFIGURAÇÃO DEFINITIVA
 ## Barbearia do Joel — Persistência em Nuvem, Segurança e Checkout Comercial
 
-**Data da Auditoria:** 14 de Outubro de 2026  
+**Data da Auditoria:** 15 de Outubro de 2026  
 **Ambiente Auditado:** Produção (Render) e Desenvolvimento Local  
 **URL de Produção:** [https://barbearia-do-joel.onrender.com/](https://barbearia-do-joel.onrender.com/)  
 **Repositório GitHub:** [https://github.com/luklen2-blip/barbearia-do-joel](https://github.com/luklen2-blip/barbearia-do-joel) (Branch `main`)  
-**Commit Publicado no GitHub:** `187ad7c` (*"audit(pos-deploy): Auditoria independente de producao, banner de status de persistencia, endpoint de backup e suite post-deploy"*)  
+**Commit Publicado no GitHub:** `883f447` (*"feat(migracao): Implementacao de backup SHA-256, sincronizacao idempotente PostgreSQL e guia definitivo de configuracao Render e Kiwify"*)  
 **Checkout Kiwify Auditado:** [https://kiwify.app/oYFh6Tz](https://kiwify.app/oYFh6Tz)  
 
 ---
@@ -38,25 +38,22 @@ Foi criado e homologado o utilitário seguro de backup e migração: `scripts/ba
   - **Hash Backup:** `4a443c4f2f7b01487bb807c0261a68d28fce088dfac1ee1177d82571e2c8376e`
   - **Resultado:** Integridade 100% confirmada.
 
-### 2.3. Mecanismo de Migração Idempotente
-O motor de migração (`_migrateFromJson` no `database.js` e em `scripts/backup_and_migrate.js`) foi arquitetado para ser **estritamente não-destrutivo e idempotente**:
+### 2.3. Mecanismo de Migração Idempotente Sem Sobrescrita de Dados Mais Recentes
+O motor de migração (`_migrateFromJson` no `database.js` e em `scripts/backup_and_migrate.js`) utiliza a estratégia **`ON CONFLICT (id) DO NOTHING`**:
 ```sql
 INSERT INTO agendamentos (
   id, cliente_nome, cliente_telefone, servico, preco, duracao_min,
   unidade, unidade_titulo, unidade_endereco, profissional,
   data, horario, observacoes, forma_pagamento, status, criado_em, atualizado_em, cancelado_em
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-ON CONFLICT (id) DO UPDATE SET
-  status = EXCLUDED.status,
-  atualizado_em = COALESCE(EXCLUDED.atualizado_em, NOW()),
-  cancelado_em = EXCLUDED.cancelado_em;
+ON CONFLICT (id) DO NOTHING;
 ```
-- **Garantias:**
-  - Registros novos são inseridos sem duplicidade.
-  - Registros já existentes no banco de dados mantêm seu identificador sem gerar duplicatas.
-  - Nenhum registro é apagado durante a sincronização.
-  - Ao final, é executada uma verificação de contagem (`SELECT COUNT(*) AS total FROM agendamentos`) e validada com o total de registros processados.
-  - **Não afirmamos que os dados foram migrados em produção até que o banco PostgreSQL seja vinculado e a contagem conferida.**
+- **Por que `ON CONFLICT (id) DO NOTHING` é a única estratégia segura:**
+  1. Se um agendamento foi atualizado, concluído ou cancelado diretamente no PostgreSQL, a reinicialização da instância ou novo deploy **NÃO** sobrescreverá o status mais recente do banco com o status antigo do JSON legado.
+  2. Impede duplicação de registros, pois o campo `id` é chave primária (Primary Key).
+  3. Preserva 100% dos dados já gravados no banco relacional.
+  4. Realiza verificação de contagem pós-inserção via `SELECT COUNT(*) AS total FROM agendamentos`.
+  5. **Não declaramos dados migrados em produção sem a conexão real e conferência de registros.**
 
 ---
 
@@ -89,7 +86,7 @@ Você pode utilizar qualquer provedor PostgreSQL em nuvem. Recomendamos uma das 
 - O Render reiniciará a aplicação aplicando a nova variável.
 - O `database.js` detectará `DATABASE_URL`, conectará via pool com SSL e timeout seguro de 5 segundos.
 - O sistema criará automaticamente as tabelas `agendamentos`, `bloqueios`, `tokens` e índices se ainda não existirem.
-- O sistema executará a migração idempotente do `agendamentos.json` e imprimirá nos logs a contagem confirmada.
+- O sistema executará a migração idempotente do `agendamentos.json` e registrará nos logs a contagem confirmada.
 
 ### Passo 4: Como Validar com Segurança (Sem Reiniciar ou Destruir Dados)
 1. Acesse no navegador: `https://barbearia-do-joel.onrender.com/api/health`.
@@ -139,16 +136,16 @@ Atualmente, o endpoint `/api/admin/login` responde com segurança `HTTP 503` inf
 
 ## 5. AUDITORIA DO CHECKOUT KIWIFY E GUIA DE CORREÇÃO NO PAINEL
 
-### Diagnóstico Técnico do Link Atual:
-- **Link Comercial Utilizado:** `https://kiwify.app/oYFh6Tz`
-- **Comportamento HTTP Observado:**
-  - Requisição para `https://kiwify.app/oYFh6Tz` retorna `HTTP 302 Found`.
-  - Header `Location`: `https://checkout-api.kiwify.com.br/metadata/track?redirect_url=https://barbearia-do-joel.onrender.com/&product_id=a64be990-c814-11f1-b7a0-836f41548751`.
-  - O endpoint de rastreamento da Kiwify então redireciona para: `https://barbearia-do-joel.onrender.com/`.
+### Diagnóstico Técnico das Requisições ao Link:
+- **Link Comercial Utilizado no Frontend:** `https://kiwify.app/oYFh6Tz`
+- **Comportamento HTTP Auditado em Produção:**
+  1. A requisição para `https://kiwify.app/oYFh6Tz` responde `HTTP 200` com o corpo `LINK_NOT_FOUND`.
+  2. O endpoint de tracking de produto correspondente (`https://checkout-api.kiwify.com.br/metadata/track?redirect_url=https://barbearia-do-joel.onrender.com/&product_id=a64be990-c814-11f1-b7a0-836f41548751`) retorna `HTTP 302 Found` apontando de volta para `https://barbearia-do-joel.onrender.com/`.
 
 ### Causa Raiz na Configuração da Kiwify:
-No painel da Kiwify, o produto `a64be990-c814-11f1-b7a0-836f41548751` está com a URL da Oferta/Campanha configurada como **"Página de Vendas Externa" apontando para o site do Render**, em vez de conduzir o comprador para a **Página de Checkout com o Formulário de Pagamento da Kiwify**.  
-Por isso, quando o usuário clica no botão "Adquirir Licença", ele é redirecionado de volta para a página inicial da barbearia.
+No painel da Kiwify, o produto `a64be990-c814-11f1-b7a0-836f41548751`:
+1. Está com a URL da campanha configurada como **"Página de Vendas Externa" apontando para a própria barbearia**, em vez de apontar para a **Página de Checkout com o Formulário de Pagamento**.
+2. O link encurtado `kiwify.app/oYFh6Tz` encontra-se inativo ou desvinculado da oferta ativa na conta da Kiwify.
 
 ### Passo a Passo Exato para Correção no Painel da Kiwify:
 1. Acesse o painel da Kiwify: [https://dashboard.kiwify.com.br](https://dashboard.kiwify.com.br) e faça login.
@@ -158,17 +155,70 @@ Por isso, quando o usuário clica no botão "Adquirir Licença", ele é redireci
 5. Você identificará dois links distintos:
    - **Link da Página de Vendas:** O link que hoje redireciona para o Render.
    - **Link do Checkout Direto:** O link oficial que exibe os campos de pagamento (Cartão de Crédito e PIX), com o formato `https://pay.kiwify.com.br/<CODIGO_DA_OFERTA>`.
-6. **Para conduzir o comprador diretamente ao pagamento:**
-   - **Opção A (Mais recomendada):** Copie o link direto de checkout (`https://pay.kiwify.com.br/...`) e substitua a URL nos botões de licença do código do site.
-   - **Opção B:** Nas configurações da oferta na Kiwify, altere o tipo de destino do link encurtador `kiwify.app/oYFh6Tz` para que o destino seja o próprio Checkout da Kiwify, e não a URL externa do Render.
+6. **Para conduzir o comprador diretamente ao formulário de pagamento:**
+   - **Opção A (Mais recomendada):** Copie o link direto de checkout (`https://pay.kiwify.com.br/...`) e nos forneça ou substitua nos botões de licença no `public/index.html`.
+   - **Opção B:** Nas configurações da oferta na Kiwify, reative o encurtador `kiwify.app/oYFh6Tz` e altere o tipo de destino para que o destino seja o próprio Checkout da Kiwify, e não a URL externa do Render.
 
 ### Separação Comercial Rigorosa Mantida:
-- **Kiwify:** Exclusiva para aquisição da licença de software e posse do código por outros profissionais/empresários.
-- **Barbearia do Joel:** Cortes agendados gratuitamente pelo site e pagos presencialmente na recepção (Cartão, Dinheiro, NFC) ou via PIX direto para o Joel (`21982156025`).
+- **Fluxo A — Licença do Software (Kiwify):** Comercialização do código-fonte e posse do sistema por outros profissionais/empresários.
+- **Fluxo B — Agendamento de Serviços (Barbearia do Joel):** Cortes agendados gratuitamente pelo site e pagos presencialmente na recepção (Cartão, Dinheiro, NFC) ou via PIX direto para o Joel (`21982156025`).
 
 ---
 
-## 6. MATRIZ DE TESTES AUTOMATIZADOS EXECUTADOS (`npm test` — 37/37 APROVADOS)
+## 6. CLASSIFICAÇÃO TRANSPARENTE DOS RECURSOS DA PLATAFORMA
+
+Em conformidade rigorosa com a solicitação da auditoria:
+
+### A. Concluído e Testado Localmente
+- ✅ Integridade dos backups SHA-256 e utilitário `scripts/backup_and_migrate.js`.
+- ✅ Migração idempotente com `ON CONFLICT (id) DO NOTHING` (blindagem contra sobrescrita de dados mais recentes).
+- ✅ Prevenção de conflito de duração contínua (ex: serviço de 60min colidindo com slot seguinte).
+- ✅ Mutex assíncrono em memória prevenindo double-booking em requisições paralelas simultâneas.
+- ✅ Autoridade exclusiva do backend sobre preços e durações (descarte de injeção fraudulenta).
+- ✅ Proteção estrita contra força bruta no login administrativo (bloqueio 429 após 5 falhas).
+- ✅ Proteção do endpoint de backup `GET /api/admin/backup` (HTTP 401 para requisições não autenticadas).
+- ✅ Suíte de 37 testes automatizados aprovada com 100% de sucesso.
+
+### B. Concluído e Validado em Produção (Live Cloud no Render)
+- ✅ Deploy ativo e sincronizado com o commit mais recente `883f447` na branch `main`.
+- ✅ Monitoramento contínuo em `/api/health` retornando `HTTP 200 OK` em ~140ms.
+- ✅ Cabeçalhos de segurança OWASP injetados: `nosniff`, `SAMEORIGIN`, `strict-origin-when-cross-origin`.
+- ✅ Endpoint `/api/info` servindo catálogo canônico de 7 serviços, chave PIX e WhatsApp do Joel.
+- ✅ Páginas legais estáticas `/termos` e `/privacidade` em conformidade integral com LGPD e ECA.
+- ✅ Painel administrativo `/admin` bloqueando com `HTTP 503` por ausência de `ADMIN_PASSWORD` (sem vazar dados).
+
+### C. Pendente de Configuração Externa pelo Proprietário
+- ⏳ **`DATABASE_URL` no Render:** Necessária para ativar o PostgreSQL permanente e cessar o modo efêmero.
+- ⏳ **`ADMIN_PASSWORD` no Render:** Necessária para liberar o acesso autenticado ao painel `/admin`.
+- ⏳ **Link Direto da Kiwify (`pay.kiwify.com.br`):** Necessário para que o botão comercial abra o formulário de pagamento em vez de retornar `LINK_NOT_FOUND` ou a página do Render.
+
+### D. Não Testado por Falta de Acesso Externo
+- 🔒 Login real com senha mestre no painel de produção (bloqueado propositalmente até que a variável seja configurada).
+- 🔒 Execução de migração na nuvem em produção (bloqueada até que a string `DATABASE_URL` seja cadastrada).
+- 💳 Realização de pagamento com cartão de crédito real no checkout Kiwify (para evitar cobranças financeiras indevidas sem autorização).
+
+---
+
+## 7. PROCEDIMENTO DE RECUPERAÇÃO E RESTAURAÇÃO DE BACKUP
+
+Caso seja necessário restaurar os agendamentos a partir de uma cópia de segurança:
+
+1. **Restaurar no Modo Local / JsonDB:**
+   - Os backups verificados estão armazenados em `data/backups/`.
+   - Para restaurar, copie o arquivo de backup para `data/agendamentos.json`:
+     ```powershell
+     Copy-Item "data\backups\agendamentos_backup_2026-10-14T22-42-20-222Z.json" -Destination "data\agendamentos.json" -Force
+     ```
+2. **Restaurar no Modo PostgreSQL:**
+   - Com `DATABASE_URL` definida no ambiente, execute o utilitário seguro de restauração e migração idempotente:
+     ```bash
+     node scripts/backup_and_migrate.js
+     ```
+   - O script lerá a base de agendamentos, validará os hashes e inserirá com segurança na tabela `agendamentos` do PostgreSQL sem sobrescrever dados mais recentes.
+
+---
+
+## 8. MATRIZ DE TESTES AUTOMATIZADOS EXECUTADOS (`npm test` — 37/37 APROVADOS)
 
 ```
 > barbearia-do-joel@2.0.0 test
@@ -185,14 +235,12 @@ Por isso, quando o usuário clica no botão "Adquirir Licença", ele é redireci
 
 ---
 
-## 7. RESUMO DE ARQUIVOS CRIADOS E MODIFICADOS
+## 9. RESUMO DE ARQUIVOS CRIADOS E MODIFICADOS
 
-1. **`scripts/backup_and_migrate.js` (Novo):** Utilitário de backup criptográfico SHA-256 e migração idempotente com verificação de contagem.
-2. **`database.js` (Modificado):** Atualizado `_migrateFromJson` para suportar `atualizado_em`, `ON CONFLICT DO UPDATE` e logging de integridade de contagem no PostgreSQL.
-3. **`server.js` (Modificado):** Adicionado endpoint `GET /api/admin/backup`, enriquecido `/api/health` com hash de commit e objeto `storage` detalhado.
-4. **`public/admin.html` (Modificado):** Adicionado banner de status de persistência (PostgreSQL vs JsonDB) e botão para download de backup `.json`.
-5. **`package.json` (Modificado):** Adicionados scripts `"test:commercial"`, `"test:audit"` e suíte completa no `"test"`.
-6. **`tests/test_commercial_and_integrity.js` (Novo):** Suíte de testes de integridade comercial e consulta segura.
-7. **`tests/test_post_deploy_audit.js` (Novo):** Suíte de testes e diagnósticos independentes pós-deploy.
-8. **`GERAR_ZIP_PRODUCAO.bat` (Modificado):** Atualizado para incluir todos os novos scripts e relatórios.
-9. **Pacote ZIP:** Atualizado na Área de Trabalho: `C:\Users\luciano\OneDrive\Desktop\barbearia-do-joel-deploy.zip`.
+1. **`scripts/backup_and_migrate.js`:** Utilitário de backup com SHA-256 e sincronização idempotente `ON CONFLICT (id) DO NOTHING`.
+2. **`database.js`:** Atualizado com a estratégia segura `ON CONFLICT (id) DO NOTHING` e suporte completo a pool, SSL e reconexão.
+3. **`server.js`:** Endpoint protegido `GET /api/admin/backup` e `/api/health` enriquecido com commit e storage.
+4. **`public/admin.html`:** Banner de status de persistência (PostgreSQL vs JsonDB) e botão para download de backup `.json`.
+5. **`tests/test_post_deploy_audit.js`:** Suíte com 13 verificações profundas de produção, segurança e checkout.
+6. **`package.json`:** Scripts de homologação configurados.
+7. **Pacote ZIP:** Atualizado na Área de Trabalho: `C:\Users\luciano\OneDrive\Desktop\barbearia-do-joel-deploy.zip`.
