@@ -5,7 +5,7 @@
 **Ambiente Auditado:** Produção (Render) e Desenvolvimento Local  
 **URL de Produção:** [https://barbearia-do-joel.onrender.com/](https://barbearia-do-joel.onrender.com/)  
 **Repositório GitHub:** [https://github.com/luklen2-blip/barbearia-do-joel](https://github.com/luklen2-blip/barbearia-do-joel) (Branch `main`)  
-**Commit Publicado no GitHub:** `883f447` (*"feat(migracao): Implementacao de backup SHA-256, sincronizacao idempotente PostgreSQL e guia definitivo de configuracao Render e Kiwify"*)  
+**Commit Publicado no GitHub:** `b7b8d9e` (*"feat(audit): Idempotencia ON CONFLICT sem sobrescrita, diagnostico Kiwify LINK_NOT_FOUND e relatorio final master"*)  
 **Checkout Kiwify Auditado:** [https://kiwify.app/oYFh6Tz](https://kiwify.app/oYFh6Tz)  
 
 ---
@@ -180,7 +180,7 @@ Em conformidade rigorosa com a solicitação da auditoria:
 - ✅ Suíte de 37 testes automatizados aprovada com 100% de sucesso.
 
 ### B. Concluído e Validado em Produção (Live Cloud no Render)
-- ✅ Deploy ativo e sincronizado com o commit mais recente `883f447` na branch `main`.
+- ✅ Deploy ativo e sincronizado com o commit mais recente `b7b8d9e` na branch `main`.
 - ✅ Monitoramento contínuo em `/api/health` retornando `HTTP 200 OK` em ~140ms.
 - ✅ Cabeçalhos de segurança OWASP injetados: `nosniff`, `SAMEORIGIN`, `strict-origin-when-cross-origin`.
 - ✅ Endpoint `/api/info` servindo catálogo canônico de 7 serviços, chave PIX e WhatsApp do Joel.
