@@ -796,12 +796,14 @@ _Por favor, confirme o recebimento do meu agendamento!_`;
       try {
         const { password } = JSON.parse(body || '{}');
 
-        // Comparação segura em tempo constante para mitigar timing attacks
-        const expectedBuffer = Buffer.from(process.env.ADMIN_PASSWORD, 'utf-8');
-        const inputBuffer = Buffer.from(String(password || ''), 'utf-8');
+        // Comparação segura em tempo constante para mitigar timing attacks (com trim para evitar espaços acidentais)
+        const expected = String(process.env.ADMIN_PASSWORD || '').trim();
+        const input = String(password || '').trim();
+        const expectedBuffer = Buffer.from(expected, 'utf-8');
+        const inputBuffer = Buffer.from(input, 'utf-8');
 
         let isMatch = false;
-        if (expectedBuffer.length === inputBuffer.length) {
+        if (expectedBuffer.length === inputBuffer.length && expectedBuffer.length > 0) {
           isMatch = crypto.timingSafeEqual(expectedBuffer, inputBuffer);
         }
 

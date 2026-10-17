@@ -177,7 +177,7 @@
 
     async function handleLogin(e) {
       e.preventDefault();
-      const pass = document.getElementById('admin-pass').value;
+      const pass = (document.getElementById('admin-pass').value || '').trim();
       const errorDiv = document.getElementById('login-error');
       errorDiv.style.display = 'none';
 
