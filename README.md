@@ -26,7 +26,7 @@ Aplicação web completa, moderna e responsiva da tradicional **Barbearia do Joe
    - PIX Oficial Banco Central com cálculo de CRC-16 e QR Code dinâmico para sinal opcional.
    - Aceitação informada no balcão de Cartões de Crédito (com parcelamento), Cartões de Débito, Dinheiro e Carteiras Digitais por Aproximação (Apple Pay, Google Pay).
 5. **Licenciamento Comercial via Kiwify:**
-   - Checkout oficial para venda definitiva do sistema a proprietários de barbearias: `https://kiwify.app/oYFh6Tz`.
+   - Checkout oficial para venda definitiva do sistema a proprietários de barbearias: `https://pay.kiwify.com.br/VFLRa1z`.
    - Seção e modal dedicados com destaque para posse vitalícia, zero mensalidades, customização e suporte de implantação.
 6. **Conformidade Legal & LGPD:**
    - Rotas `/termos` e `/privacidade` em conformidade com o Código Civil, ECA e Art. 14 da LGPD.
@@ -131,7 +131,7 @@ O motor `database.js` implementa um padrão híbrido resiliente:
 ## 💼 Licenciamento Comercial da Plataforma (Kiwify)
 
 Para proprietários de barbearias e salões interessados em adquirir o sistema:
-- **Checkout Oficial:** [https://kiwify.app/oYFh6Tz](https://kiwify.app/oYFh6Tz)
+- **Checkout Oficial:** [https://pay.kiwify.com.br/VFLRa1z](https://pay.kiwify.com.br/VFLRa1z)
 - **O que está incluído:**
   - Código-fonte integral em Node.js sem bloqueios ou travas.
   - Painel Administrativo de gestão de agenda e bloqueios.

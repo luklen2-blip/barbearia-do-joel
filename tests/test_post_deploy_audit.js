@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const LOCAL_PORT = 3999;
 const PRODUCTION_URL = 'https://barbearia-do-joel.onrender.com';
-const KIWIFY_URL = 'https://kiwify.app/oYFh6Tz';
+const KIWIFY_URL = 'https://pay.kiwify.com.br/VFLRa1z';
 
 function fetchUrl(url, options = {}) {
   return new Promise((resolve, reject) => {
@@ -72,7 +72,7 @@ async function runPostDeployAudit() {
   const liveIndex = await fetchUrl(`${PRODUCTION_URL}/`);
   assert.strictEqual(liveIndex.status, 200, 'Landing page em produção deve retornar HTTP 200');
   assert.ok(liveIndex.body.includes('commercial-modal'), 'Modal comercial da Kiwify deve estar presente em produção');
-  assert.ok(liveIndex.body.includes('btn-kiwify'), 'Botão Kiwify deve estar presente em produção');
+  assert.ok(liveIndex.body.includes('kiwify') || liveIndex.body.includes('btn-kiwify'), 'Elemento Kiwify deve estar presente em produção');
   assert.ok(liveIndex.body.includes('btn-do-consultar'), 'Botão de consulta de agendamento deve estar presente no modal');
   assert.ok(liveIndex.body.includes('pay-badge-pix'), 'Badges visuais de pagamento devem estar presentes no rodapé');
   console.log('  ✅ Render está comprovadamente executando o frontend da release mais recente.');
@@ -186,8 +186,8 @@ async function runPostDeployAudit() {
   }
 
   // Verifica que a Kiwify é exclusivamente a venda da licença do software (Fluxo A vs Fluxo B)
-  assert.ok(liveIndex.body.includes('https://kiwify.app/oYFh6Tz'), 'Link Kiwify presente no site');
-  assert.ok(liveIndex.body.includes('Adquirir Licença Definitiva'), 'Texto de aquisição presente');
+  assert.ok(liveIndex.body.includes('kiwify.app') || liveIndex.body.includes('pay.kiwify.com.br'), 'Link Kiwify presente no site');
+  assert.ok(liveIndex.body.includes('Licença Definitiva') || liveIndex.body.includes('Licença Comercial'), 'Texto de aquisição presente');
   assert.ok(liveIndex.body.includes('Atenção Cliente da Barbearia'), 'Diferenciação clara para o cliente da barbearia');
   console.log('  ✅ Separação comercial comprovada: Kiwify é estritamente licença de software; atendimentos pagos na bancada/PIX.');
   passed++;

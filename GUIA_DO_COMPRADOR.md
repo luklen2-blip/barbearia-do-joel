@@ -93,6 +93,7 @@ O projeto já vem com as receitas oficiais para a nuvem gratuita do Render.com:
 Se você comprou este sistema diretamente com **Luciano**, você conta com suporte inicial para dúvidas e apoio na implantação:
 
 - 📱 WhatsApp Oficial de Suporte: [(21) 98215-6025](https://wa.me/5521982156025)
+- 💳 Checkout Oficial da Licença: [https://pay.kiwify.com.br/VFLRa1z](https://pay.kiwify.com.br/VFLRa1z)
 - 💻 Repositório Oficial: [github.com/luklen2-blip/barbearia-do-joel](https://github.com/luklen2-blip/barbearia-do-joel)
 
 Aproveite o seu novo sistema e bons negócios! 💈✂️
