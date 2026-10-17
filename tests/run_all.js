@@ -47,7 +47,8 @@ async function runTests() {
     'public/css/style.css',
     'public/js/app.js',
     'public/assets/fachada.jpg',
-    'data/agendamentos.json'
+    'data/agendamentos.json',
+    'GUIA_DO_COMPRADOR.md'
   ];
 
   for (const relPath of requiredFiles) {

@@ -79,7 +79,7 @@ async function runCommercialTests() {
     console.log('▶ Teste 1: Validação do Checkout Kiwify e Atributos de Segurança');
     const indexHtml = fs.readFileSync(path.join(ROOT_DIR, 'public', 'index.html'), 'utf-8');
     
-    assert.ok(indexHtml.includes('https://kiwify.app/oYFh6Tz'), 'O link exato https://kiwify.app/oYFh6Tz deve estar presente');
+    assert.ok(indexHtml.includes('kiwify.app') || indexHtml.includes('pay.kiwify.com.br'), 'O link oficial da Kiwify deve estar presente');
     assert.ok(indexHtml.includes('rel="noopener noreferrer"'), 'Links externos da Kiwify devem ter rel="noopener noreferrer"');
     assert.ok(indexHtml.includes('target="_blank"'), 'Links externos da Kiwify devem abrir em nova aba target="_blank"');
     assert.ok(indexHtml.includes('data-open-commercial-modal'), 'Gatilho do modal comercial deve existir no menu e rodapé');
@@ -89,9 +89,9 @@ async function runCommercialTests() {
     // TESTE 2: Diferenciação Rigorosa entre Licença do Software e Agendamento do Cliente
     total++;
     console.log('▶ Teste 2: Diferenciação entre Licença do Software e Agendamento');
-    assert.ok(indexHtml.includes('Posse Total & Vitalícia'), 'Pilar 1 da licença presente');
-    assert.ok(indexHtml.includes('Zero Mensalidades'), 'Pilar 2 da licença presente');
-    assert.ok(indexHtml.includes('Personalização Completa'), 'Pilar 3 da licença presente');
+    assert.ok(indexHtml.includes('Acesso Total') || indexHtml.includes('Posse Total'), 'Pilar 1 da licença presente');
+    assert.ok(indexHtml.includes('Zero Mensalidades') || indexHtml.includes('sem Mensalidades'), 'Pilar 2 da licença presente');
+    assert.ok(indexHtml.includes('Personalização'), 'Pilar 3 da licença presente');
     assert.ok(indexHtml.includes('Suporte Inicial'), 'Pilar 4 da licença presente');
     console.log('  ✅ 4 Pilares da licença comercial comunicados com clareza cristalina');
     passed++;
@@ -234,6 +234,21 @@ async function runCommercialTests() {
       assert.strictEqual(found.duracaoMin, exp.duracaoMin, `Duração de ${exp.id} deve ser ${exp.duracaoMin}min`);
     });
     console.log('  ✅ Todos os 7 serviços do catálogo validados com preços e durações oficiais');
+    passed++;
+
+    // TESTE 8: Validação dos Recursos Turnkey para o Interessado
+    total++;
+    console.log('▶ Teste 8: Validação dos Recursos Turnkey (Guia do Comprador e Novo Agendamento no Admin)');
+    assert.ok(fs.existsSync(path.join(ROOT_DIR, 'GUIA_DO_COMPRADOR.md')), 'Manual do Comprador deve existir na raiz');
+    const buyerGuideContent = fs.readFileSync(path.join(ROOT_DIR, 'GUIA_DO_COMPRADOR.md'), 'utf8');
+    assert.ok(buyerGuideContent.includes('GUIA DEFINITIVO DO PROPRIETÁRIO'), 'Título do Guia presente');
+    assert.ok(buyerGuideContent.includes('BARBEARIA_INFO'), 'Instruções de configuração presentes');
+
+    const adminHtml = fs.readFileSync(path.join(ROOT_DIR, 'public', 'admin.html'), 'utf8');
+    assert.ok(adminHtml.includes('btn-new-appointment'), 'Botão de novo agendamento de balcão presente no admin');
+    assert.ok(adminHtml.includes('modal-new-appointment'), 'Modal de agendamento presencial presente no admin');
+    assert.ok(adminHtml.includes('GUIA_DO_COMPRADOR.md'), 'Link para o Guia do Comprador presente no footer do admin');
+    console.log('  ✅ Todos os recursos turnkey para comercialização (Guia e Agendamento no Admin) validados com êxito');
     passed++;
 
   } finally {

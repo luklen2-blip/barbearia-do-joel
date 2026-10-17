@@ -53,7 +53,10 @@
           <h2 style="font-size: 1.8rem; font-weight: 800; color: #fff;">Agenda de Atendimentos</h2>
           <p style="color: var(--text-muted); font-size: 0.95rem;">Controle em tempo real de clientes, horários e unidades.</p>
         </div>
-        <button id="btn-refresh" class="btn btn-outline" style="font-size: 0.85rem;">🔄 Atualizar Agenda</button>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button id="btn-new-appointment" class="btn btn-primary" style="font-size: 0.85rem; padding: 10px 18px;">➕ Novo Agendamento (Balcão)</button>
+          <button id="btn-refresh" class="btn btn-outline" style="font-size: 0.85rem;">🔄 Atualizar Agenda</button>
+        </div>
       </div>
 
       <!-- Banner de Status de Armazenamento e Persistência -->
@@ -141,12 +144,102 @@
           </table>
         </div>
       </div>
+    <!-- Modal de Novo Agendamento Administrativo (Balcão / Telefone) -->
+    <div id="modal-new-appointment" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 16px;">
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); max-width: 520px; width: 100%; padding: 28px; position: relative; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h3 style="font-size: 1.3rem; color: #fff; margin: 0;">➕ Novo Agendamento (Balcão)</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 0 0;">Cadastrar cliente presencial ou recebido pelo WhatsApp.</p>
+          </div>
+          <button id="btn-close-modal-appointment" type="button" style="background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+        </div>
+
+        <form id="form-new-appointment">
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Nome Completo do Cliente *</label>
+            <input type="text" id="admin-new-nome" class="form-control" placeholder="Ex: Rodrigo Santos" required style="width: 100%;">
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">WhatsApp / Telefone *</label>
+            <input type="tel" id="admin-new-telefone" class="form-control" placeholder="Ex: 21988887777 (com DDD)" required style="width: 100%;">
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Serviço *</label>
+            <select id="admin-new-servico" class="form-control" required style="width: 100%;">
+              <option value="corte-social">Corte Tradicional / Social (R$ 30,00 - 30 min)</option>
+              <option value="corte-degrade">Corte Degradê / Fade (R$ 35,00 - 45 min)</option>
+              <option value="barba-terapia">Barba Terapia Tradicional (R$ 25,00 - 30 min)</option>
+              <option value="combo-completo">Combo Completo: Cabelo + Barba (R$ 60,00 - 60 min)</option>
+              <option value="corte-infantil">Corte Infantil (Até 12 anos) (R$ 30,00 - 30 min)</option>
+              <option value="sobrancelha">Design / Alinhamento de Sobrancelha (R$ 15,00 - 15 min)</option>
+              <option value="pigmentacao">Pigmentação / Camuflagem de Barba (R$ 25,00 - 30 min)</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Unidade de Atendimento *</label>
+            <select id="admin-new-unidade" class="form-control" required style="width: 100%;">
+              <option value="matriz">Matriz (Rua Francisco Mota, 93)</option>
+              <option value="filial">Filial (Rua Alfredo Mariano, 24)</option>
+            </select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div>
+              <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Data (Ter a Sex) *</label>
+              <input type="date" id="admin-new-data" class="form-control" required style="width: 100%;">
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Horário *</label>
+              <select id="admin-new-horario" class="form-control" required style="width: 100%;">
+                <option value="09:00">09:00</option>
+                <option value="09:30">09:30</option>
+                <option value="10:00">10:00</option>
+                <option value="10:30">10:30</option>
+                <option value="11:00">11:00</option>
+                <option value="11:30">11:30</option>
+                <option value="12:00">12:00</option>
+                <option value="12:30">12:30</option>
+                <option value="13:00">13:00</option>
+                <option value="13:30">13:30</option>
+                <option value="14:00">14:00</option>
+                <option value="14:30">14:30</option>
+                <option value="15:00">15:00</option>
+                <option value="15:30">15:30</option>
+                <option value="16:00">16:00</option>
+                <option value="16:30">16:30</option>
+                <option value="17:00">17:00</option>
+                <option value="17:30">17:30</option>
+                <option value="18:00">18:00</option>
+                <option value="18:30">18:30</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 18px;">
+            <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Observações (Opcional)</label>
+            <input type="text" id="admin-new-obs" class="form-control" placeholder="Ex: Cliente de balcão, pagamento em dinheiro..." style="width: 100%;">
+          </div>
+
+          <div id="admin-new-error" style="display: none; color: #ef4444; font-size: 0.85rem; margin-bottom: 14px; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: var(--radius-sm);"></div>
+          <div id="admin-new-success" style="display: none; color: #10b981; font-size: 0.85rem; margin-bottom: 14px; padding: 10px; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius-sm);"></div>
+
+          <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button type="button" id="btn-cancel-modal-appointment" class="btn btn-outline" style="font-size: 0.85rem;">Cancelar</button>
+            <button type="submit" id="btn-submit-modal-appointment" class="btn btn-primary" style="font-size: 0.85rem; padding: 10px 22px;">Confirmar Agendamento</button>
+          </div>
+        </form>
+      </div>
     </div>
   </main>
 
   <footer class="footer" style="padding: 30px 0; border-top: 1px solid var(--border-color);">
     <div class="container" style="text-align: center; font-size: 0.85rem; color: var(--text-muted);">
-      © 1992 - 2026 Barbearia do Joel · Painel Administrativo de Gestão
+      © 1992 - 2026 Barbearia do Joel · Painel Administrativo de Gestão · 
+      <a href="https://github.com/luklen2-blip/barbearia-do-joel/blob/main/GUIA_DO_COMPRADOR.md" target="_blank" rel="noopener" style="color: var(--accent-gold); text-decoration: none; font-weight: 600;">📖 Guia do Proprietário (Manual de Customização)</a>
     </div>
   </footer>
 
@@ -173,6 +266,87 @@
         document.getElementById('filter-status').value = '';
         loadAgendamentos();
       });
+
+      // --- Modal Novo Agendamento (Balcão) ---
+      const modalApp = document.getElementById('modal-new-appointment');
+      const btnOpenApp = document.getElementById('btn-new-appointment');
+      const btnCloseApp = document.getElementById('btn-close-modal-appointment');
+      const btnCancelApp = document.getElementById('btn-cancel-modal-appointment');
+      const formApp = document.getElementById('form-new-appointment');
+      const dataInput = document.getElementById('admin-new-data');
+
+      // Preenche data mínima como hoje
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (dataInput) {
+        dataInput.min = todayStr;
+        dataInput.value = todayStr;
+      }
+
+      if (btnOpenApp) {
+        btnOpenApp.addEventListener('click', () => {
+          modalApp.style.display = 'flex';
+          document.getElementById('admin-new-error').style.display = 'none';
+          document.getElementById('admin-new-success').style.display = 'none';
+        });
+      }
+
+      const closeModal = () => {
+        modalApp.style.display = 'none';
+        formApp.reset();
+        if (dataInput) dataInput.value = todayStr;
+      };
+
+      if (btnCloseApp) btnCloseApp.addEventListener('click', closeModal);
+      if (btnCancelApp) btnCancelApp.addEventListener('click', closeModal);
+
+      if (formApp) {
+        formApp.addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          const errDiv = document.getElementById('admin-new-error');
+          const succDiv = document.getElementById('admin-new-success');
+          const submitBtn = document.getElementById('btn-submit-modal-appointment');
+          errDiv.style.display = 'none';
+          succDiv.style.display = 'none';
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Gravando...';
+
+          const payload = {
+            clienteNome: document.getElementById('admin-new-nome').value.trim(),
+            clienteTelefone: document.getElementById('admin-new-telefone').value.trim().replace(/\D/g, ''),
+            servicoId: document.getElementById('admin-new-servico').value,
+            unidade: document.getElementById('admin-new-unidade').value,
+            data: document.getElementById('admin-new-data').value,
+            horario: document.getElementById('admin-new-horario').value,
+            observacoes: document.getElementById('admin-new-obs').value.trim()
+          };
+
+          try {
+            const res = await fetch('/api/agendamentos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+              succDiv.innerHTML = `✅ <strong>Agendamento confirmado com sucesso!</strong><br>Protocolo: <code>#${data.agendamento.id}</code> · Cliente: ${data.agendamento.clienteNome}`;
+              succDiv.style.display = 'block';
+              loadAgendamentos();
+              setTimeout(() => {
+                closeModal();
+              }, 1600);
+            } else {
+              errDiv.innerHTML = `⚠️ <strong>Não foi possível agendar:</strong><br>${data.error || 'Verifique os dados informados.'}`;
+              errDiv.style.display = 'block';
+            }
+          } catch (err) {
+            errDiv.textContent = 'Erro de conexão ao salvar agendamento.';
+            errDiv.style.display = 'block';
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Confirmar Agendamento';
+          }
+        });
+      }
     });
 
     async function handleLogin(e) {

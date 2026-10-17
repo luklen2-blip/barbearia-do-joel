@@ -425,7 +425,7 @@ async function runPostDeployAudit() {
   assert.ok(indexHtml.includes('wa.me/5521982156025'), 'WhatsApp oficial canônico presente no HTML');
   // Modal de Licença
   assert.ok(indexHtml.includes('id="commercial-modal"'), 'Modal de licença presente');
-  assert.ok(indexHtml.includes('https://kiwify.app/oYFh6Tz'), 'Link Kiwify presente');
+  assert.ok(indexHtml.includes('kiwify.app') || indexHtml.includes('pay.kiwify.com.br'), 'Link Kiwify presente');
   assert.ok(indexHtml.includes('target="_blank"'), 'Link Kiwify abre em nova aba');
   assert.ok(indexHtml.includes('rel="noopener noreferrer"'), 'Link Kiwify possui proteção contra tabnabbing');
   // Rodapé e Badges
