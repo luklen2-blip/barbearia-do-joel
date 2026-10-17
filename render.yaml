@@ -13,3 +13,5 @@ services:
         value: production
       - key: APP_NAME
         value: "Barbearia do Joel"
+      - key: ADMIN_PASSWORD
+        value: "joel"

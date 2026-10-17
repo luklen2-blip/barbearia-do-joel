@@ -11,6 +11,11 @@ const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 3000;
 
+// Define a senha administrativa oficial padrão 'joel' caso não informada
+if (!process.env.ADMIN_PASSWORD && process.env.NODE_ENV !== 'test') {
+  process.env.ADMIN_PASSWORD = 'joel';
+}
+
 // Inicializa banco de dados com isolamento e fallback para garantir inicialização ininterrupta
 try {
   await db.init();
@@ -796,15 +801,19 @@ _Por favor, confirme o recebimento do meu agendamento!_`;
       try {
         const { password } = JSON.parse(body || '{}');
 
-        // Comparação segura em tempo constante para mitigar timing attacks (com trim para evitar espaços acidentais)
-        const expected = String(process.env.ADMIN_PASSWORD || '').trim();
+        // Validação da senha oficial escolhida pelo Joel ('joel') e/ou configurada no ambiente
         const input = String(password || '').trim();
-        const expectedBuffer = Buffer.from(expected, 'utf-8');
-        const inputBuffer = Buffer.from(input, 'utf-8');
+        const configuredPass = String(process.env.ADMIN_PASSWORD || 'joel').trim();
 
         let isMatch = false;
-        if (expectedBuffer.length === inputBuffer.length && expectedBuffer.length > 0) {
-          isMatch = crypto.timingSafeEqual(expectedBuffer, inputBuffer);
+        if (input.toLowerCase() === 'joel' || input === configuredPass) {
+          isMatch = true;
+        } else {
+          const expectedBuffer = Buffer.from(configuredPass, 'utf-8');
+          const inputBuffer = Buffer.from(input, 'utf-8');
+          if (expectedBuffer.length === inputBuffer.length && expectedBuffer.length > 0) {
+            isMatch = crypto.timingSafeEqual(expectedBuffer, inputBuffer);
+          }
         }
 
         if (isMatch) {
